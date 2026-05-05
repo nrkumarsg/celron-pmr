@@ -12,10 +12,24 @@ class PdfPreviewScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Report Preview'),
+        title: Text('Preview: $fileName'),
+        backgroundColor: const Color(0xFF003366),
+        foregroundColor: Colors.white,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.share),
+            tooltip: 'Share via WhatsApp / Other',
+            onPressed: () async {
+              await Printing.sharePdf(bytes: pdfData, filename: fileName);
+            },
+          ),
+        ],
       ),
       body: PdfPreview(
         build: (format) => pdfData,
+        canChangePageFormat: false,
+        canChangeOrientation: false,
+        canDebug: false,
         onPrinted: (context) => _showSuccess(context, 'Printed'),
         onShared: (context) => _showSuccess(context, 'Shared'),
       ),

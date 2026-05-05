@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "591771362863",
+    "project_id": "celron-pmr",
+    "storage_bucket": "celron-pmr.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:591771362863:android:991b713f5ebbc235e0c8da",
+        "android_client_info": {
+          "package_name": "com.celron.pmr"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC4tI_DsTKuK9rsGCfX9oIWq2VZwY1ppz8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

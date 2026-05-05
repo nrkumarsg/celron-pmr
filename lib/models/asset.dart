@@ -5,6 +5,9 @@ class Asset {
   final String reference; // e.g. PMP-1011-01
   final String model;
   final String type;
+  final String location; // e.g. L3
+  final double rpm;
+  final double hz;
 
   Asset({
     required this.id,
@@ -13,7 +16,12 @@ class Asset {
     required this.reference,
     required this.model,
     required this.type,
+    required this.location,
+    this.rpm = 0.0,
+    this.hz = 0.0,
   });
+
+  String get systemName => name;
 
   Map<String, dynamic> toMap() {
     return {
@@ -23,6 +31,9 @@ class Asset {
       'reference': reference,
       'model': model,
       'type': type,
+      'location': location,
+      'rpm': rpm,
+      'hz': hz,
     };
   }
 
@@ -34,6 +45,9 @@ class Asset {
       reference: map['reference'] ?? '',
       model: map['model'] ?? '',
       type: map['type'] ?? '',
+      location: map['location'] ?? '',
+      rpm: (map['rpm'] ?? 0.0).toDouble(),
+      hz: (map['hz'] ?? 0.0).toDouble(),
     );
   }
 }

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import '../models/inspection.dart';
+
+enum HealthStatus { normal, marginal, critical }
 
 class HealthLogic {
   static HealthStatus getVibrationStatus(double g) {
