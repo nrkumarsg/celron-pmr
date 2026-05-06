@@ -219,7 +219,7 @@ class _AssetListScreenState extends State<AssetListScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Customer: Customer Name: ${widget.site.customerName}', style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF003366))),
+          Text('Partner: ${widget.site.partnerName}', style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF003366))),
           const SizedBox(height: 4),
           Text('Site: Site Name: ${widget.site.name}'),
           const SizedBox(height: 4),

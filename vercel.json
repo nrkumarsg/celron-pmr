@@ -1,7 +1,16 @@
 {
-  "public": true,
-  "cleanUrls": true,
   "rewrites": [
-    { "source": "/(.*)", "destination": "/index.html" }
+    {
+      "source": "/(assets|canvaskit|icons)/(.*)",
+      "destination": "/build/web/$1/$2"
+    },
+    {
+      "source": "/(favicon\\.png|manifest\\.json|version\\.json|.*\\.js|.*\\.wasm|.*\\.symbols)",
+      "destination": "/build/web/$1"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/build/web/index.html"
+    }
   ]
 }

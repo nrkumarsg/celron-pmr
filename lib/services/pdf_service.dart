@@ -7,6 +7,7 @@ import '../models/company.dart';
 import '../models/site.dart';
 import '../models/asset.dart';
 import '../models/inspection.dart';
+import '../logic/health_logic.dart';
 
 class PdfService {
   static Future<Uint8List> generateInspectionPdf({
@@ -23,7 +24,7 @@ class PdfService {
         margin: const pw.EdgeInsets.all(32),
         build: (pw.Context context) {
           return [
-            _buildHeader(company),
+            _buildHeader(company, reportNo: 'IR-${inspection.id.substring(inspection.id.length - 4)}'),
             pw.SizedBox(height: 20),
             _buildProjectInfo(site, asset, inspection),
             pw.SizedBox(height: 20),
@@ -33,6 +34,8 @@ class PdfService {
             pw.SizedBox(height: 10),
             _buildParameterTable('Pipes and Others Parameters:', inspection.pipeParameters),
             pw.SizedBox(height: 30),
+            _buildSignatures(site),
+            pw.SizedBox(height: 20),
             _buildFooter(),
           ];
         },
@@ -56,7 +59,7 @@ class PdfService {
           pageFormat: PdfPageFormat.a4,
           margin: const pw.EdgeInsets.all(32),
           build: (pw.Context context) => [
-            _buildHeader(company),
+            _buildHeader(company, reportNo: 'IR-${inspection.id.substring(inspection.id.length - 4)}'),
             pw.SizedBox(height: 20),
             _buildProjectInfo(site, asset, inspection),
             pw.SizedBox(height: 20),
@@ -66,6 +69,8 @@ class PdfService {
             pw.SizedBox(height: 10),
             _buildParameterTable('Pipes and Others Parameters:', inspection.pipeParameters),
             pw.SizedBox(height: 30),
+            _buildSignatures(site),
+            pw.SizedBox(height: 20),
             _buildFooter(),
           ],
         ),
@@ -87,7 +92,7 @@ class PdfService {
         pageFormat: PdfPageFormat.a4,
         margin: const pw.EdgeInsets.all(32),
         build: (pw.Context context) => [
-          _buildHeader(company),
+          _buildHeader(company, title: 'SERVICE REPORT'),
           pw.SizedBox(height: 10),
           pw.Container(
             width: double.infinity,
@@ -104,7 +109,7 @@ class PdfService {
           pw.SizedBox(height: 20),
           _buildSummaryTable(assetData),
           pw.SizedBox(height: 40),
-          _buildSignatures(),
+          _buildSignatures(site),
           pw.Spacer(),
           _buildFooter(),
         ],
@@ -113,40 +118,54 @@ class PdfService {
     return pdf.save();
   }
 
-  static pw.Widget _buildHeader(Company company) {
-    return pw.Container(
-      decoration: pw.BoxDecoration(border: pw.Border.all(color: PdfColors.blue900, width: 2)),
-      child: pw.Row(
-        children: [
-          pw.Container(
-            width: 120,
-            padding: const pw.EdgeInsets.all(10),
-            child: pw.Column(
+  static pw.Widget _buildHeader(Company company, {String title = 'INSPECTION REPORT', String? reportNo}) {
+    return pw.Column(
+      children: [
+        pw.Row(
+          mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+          crossAxisAlignment: pw.CrossAxisAlignment.start,
+          children: [
+            // Left: Logo and Name
+            pw.Column(
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
               children: [
+                pw.Container(
+                  width: 80,
+                  height: 60,
+                  child: pw.Center(
+                    child: pw.Text('LOGO', style: pw.TextStyle(color: PdfColors.blue900, fontWeight: pw.FontWeight.bold, fontSize: 10)),
+                  ),
+                ),
                 pw.Text('CEL-RON', style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold, color: PdfColors.blue900)),
-                pw.Text('ENTERPRISES', style: pw.TextStyle(fontSize: 8, color: PdfColors.blue900)),
+                pw.Text('ENTERPRISES PTE LTD', style: pw.TextStyle(fontSize: 6, color: PdfColors.blue900)),
               ],
             ),
-          ),
-          pw.Expanded(
-            child: pw.Container(
-              padding: const pw.EdgeInsets.all(8),
-              decoration: const pw.BoxDecoration(border: pw.Border(left: pw.BorderSide(color: PdfColors.blue900, width: 2))),
-              child: pw.Column(
-                crossAxisAlignment: pw.CrossAxisAlignment.center,
-                children: [
-                  pw.Text(company.name, style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold, color: PdfColors.red900)),
-                  pw.Text(company.regOffice, style: const pw.TextStyle(fontSize: 7), textAlign: pw.TextAlign.center),
-                  pw.Text('Tel: ${company.phone}  Fax: ${company.fax}', style: const pw.TextStyle(fontSize: 7)),
-                  pw.Text('Mobile: ${company.mobile}  Email: ${company.email}', style: const pw.TextStyle(fontSize: 7)),
-                  pw.Text('Web: ${company.web}', style: const pw.TextStyle(fontSize: 7)),
-                  pw.Text('BRN: ${company.brn} | GST Reg No: ${company.gstReg}', style: pw.TextStyle(fontSize: 7, fontWeight: pw.FontWeight.bold)),
-                ],
-              ),
+            // Right: Company Details
+            pw.Column(
+              crossAxisAlignment: pw.CrossAxisAlignment.end,
+              children: [
+                pw.Text('CEL-RON ENTERPRISES PTE LTD', style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold, color: PdfColors.red900)),
+                pw.Text('UEN NO. ${company.brn}', style: pw.TextStyle(fontSize: 8, fontWeight: pw.FontWeight.bold)),
+                pw.Text(company.regOffice, style: const pw.TextStyle(fontSize: 7)),
+                pw.Text('Phone: ${company.phone}  Email: ${company.email}', style: const pw.TextStyle(fontSize: 7)),
+                pw.Text('www.celron.net', style: const pw.TextStyle(fontSize: 7)),
+              ],
             ),
-          ),
-        ],
-      ),
+          ],
+        ),
+        pw.SizedBox(height: 10),
+        pw.Row(
+          mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+          children: [
+            pw.Text('Insp. Rep No: ${reportNo ?? "QTN-${DateFormat('yyMM').format(DateTime.now())}-0001"}', 
+              style: pw.TextStyle(fontSize: 9, fontWeight: pw.FontWeight.bold, color: PdfColors.blue900)),
+            pw.Text(title, style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold, color: PdfColors.blue900)),
+            pw.Text('DATE: ${DateFormat('dd/MM/yy').format(DateTime.now())}', 
+              style: pw.TextStyle(fontSize: 9, fontWeight: pw.FontWeight.bold, color: PdfColors.blue900)),
+          ],
+        ),
+        pw.Container(height: 1, color: PdfColors.blue900, margin: const pw.EdgeInsets.symmetric(vertical: 2)),
+      ],
     );
   }
 
@@ -155,27 +174,29 @@ class PdfService {
       children: [
         pw.Container(
           width: double.infinity,
-          padding: const pw.EdgeInsets.symmetric(vertical: 4),
-          color: PdfColors.blue900,
-          child: pw.Center(
-            child: pw.Text(
-              'QUARTERLY CONDITION MONITORING REPORT', 
-              style: pw.TextStyle(color: PdfColors.white, fontWeight: pw.FontWeight.bold, fontSize: 10)
-            )
+          padding: const pw.EdgeInsets.symmetric(vertical: 6, horizontal: 10),
+          decoration: const pw.BoxDecoration(
+            color: PdfColors.blue900,
+            borderRadius: pw.BorderRadius.only(topLeft: pw.Radius.circular(4), topRight: pw.Radius.circular(4)),
+          ),
+          child: pw.Text(
+            'SYSTEM & SITE INFORMATION', 
+            style: pw.TextStyle(color: PdfColors.white, fontWeight: pw.FontWeight.bold, fontSize: 10)
           ),
         ),
-        _infoRow('Customer:', 'Customer Name: ${site.customerName}'),
-        _infoRow('Site:', 'Site Name: ${site.name}'),
-        _infoRow('Address:', 'Address: ${site.address}'),
-        _infoRow('Project Ref:', 'Project Ref: ${inspection.projectRef}'),
+        _infoRow('Partner:', site.partnerName),
+        _infoRow('Site:', site.name),
+        _infoRow('Address:', site.address),
+        _infoRow('Project Ref:', inspection.projectRef),
         _infoRow('System Ref:', asset.reference),
         _infoRow('Model:', asset.model),
-        _infoRow('Loc:', 'Asset Location: ${asset.location}'),
+        _infoRow('Loc:', asset.location),
         _infoRow('RPM:', asset.rpm.toString()),
         _infoRow('Hz:', asset.hz.toString()),
         _infoRow('Frequency:', 'RPM/Hz: ${asset.hz != 0 ? (asset.rpm / asset.hz).toStringAsFixed(2) : '0.0'}'),
         _infoRow('Inspection Date:', DateFormat('dd MMM yyyy').format(inspection.date)),
-        _infoRow('Overall Status:', 'Status: ${inspection.overallStatus}', isBoldValue: true),
+        _infoRow('Machine Class:', '${HealthLogic.getClass(asset.powerKw)} (${asset.powerKw} kW)'),
+        _infoRow('Overall Status:', inspection.overallStatus, isBoldValue: true),
       ],
     );
   }
@@ -242,16 +263,16 @@ class PdfService {
       border: pw.TableBorder.all(color: PdfColors.grey400, width: 0.5),
       children: [
         pw.TableRow(children: [
-          pw.Padding(padding: const pw.EdgeInsets.all(5), child: pw.Text('Customer: Customer Name: ${site.customerName}', style: const pw.TextStyle(fontSize: 9))),
-          pw.Padding(padding: const pw.EdgeInsets.all(5), child: pw.Text('Date: Inspection Date: ${DateFormat('dd/MM/yy').format(DateTime.now())}', style: const pw.TextStyle(fontSize: 9))),
+          pw.Padding(padding: const pw.EdgeInsets.all(5), child: pw.Text('Partner: ${site.partnerName}', style: const pw.TextStyle(fontSize: 9))),
+          pw.Padding(padding: const pw.EdgeInsets.all(5), child: pw.Text('Date: ${DateFormat('dd/MM/yy').format(DateTime.now())}', style: const pw.TextStyle(fontSize: 9))),
         ]),
         pw.TableRow(children: [
-          pw.Padding(padding: const pw.EdgeInsets.all(5), child: pw.Text('Site: Site Name: ${site.name}', style: const pw.TextStyle(fontSize: 9))),
-          pw.Padding(padding: const pw.EdgeInsets.all(5), child: pw.Text('Our Ref: Project Ref: $ourRef', style: const pw.TextStyle(fontSize: 9))),
+          pw.Padding(padding: const pw.EdgeInsets.all(5), child: pw.Text('Site: ${site.name}', style: const pw.TextStyle(fontSize: 9))),
+          pw.Padding(padding: const pw.EdgeInsets.all(5), child: pw.Text('Our Ref: $ourRef', style: const pw.TextStyle(fontSize: 9))),
         ]),
         pw.TableRow(children: [
-          pw.Padding(padding: const pw.EdgeInsets.all(5), child: pw.Text('Address: Address: ${site.address}', style: const pw.TextStyle(fontSize: 9))),
-          pw.Padding(padding: const pw.EdgeInsets.all(5), child: pw.Text('Job: Description: $jobDesc', style: const pw.TextStyle(fontSize: 9))),
+          pw.Padding(padding: const pw.EdgeInsets.all(5), child: pw.Text('Address: ${site.address}', style: const pw.TextStyle(fontSize: 9))),
+          pw.Padding(padding: const pw.EdgeInsets.all(5), child: pw.Text('Job: $jobDesc', style: const pw.TextStyle(fontSize: 9))),
         ]),
       ],
     );
@@ -287,27 +308,59 @@ class PdfService {
     );
   }
 
-  static pw.Widget _buildSignatures() {
+  static pw.Widget _buildSignatures(Site site) {
     return pw.Row(
       mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
       children: [
-        pw.Column(
-          crossAxisAlignment: pw.CrossAxisAlignment.start,
-          children: [
-            pw.Text('For CEL-RON Enterprises Pte Ltd', style: pw.TextStyle(fontSize: 9, fontWeight: pw.FontWeight.bold)),
-            pw.SizedBox(height: 40),
-            pw.Container(width: 150, decoration: const pw.BoxDecoration(border: pw.Border(top: pw.BorderSide(color: PdfColors.grey400)))),
-            pw.Text('Authorized Signature', style: const pw.TextStyle(fontSize: 8)),
-          ],
+        // Company Box
+        pw.Container(
+          width: 240,
+          decoration: pw.BoxDecoration(
+            border: pw.Border.all(color: PdfColors.blue900, width: 1),
+            borderRadius: pw.BorderRadius.circular(8),
+          ),
+          child: pw.Column(
+            children: [
+              pw.Container(height: 60, padding: const pw.EdgeInsets.all(10)), // Space for actual signature
+              pw.Container(height: 1, color: PdfColors.grey300),
+              pw.Container(
+                padding: const pw.EdgeInsets.all(5),
+                child: pw.Column(
+                  children: [
+                    pw.Text('AUTHORIZED SIGNATURE', style: pw.TextStyle(fontSize: 8, fontWeight: pw.FontWeight.bold, color: PdfColors.blue900)),
+                    pw.Text('CEL-RON ENTERPRISES PTE LTD', style: pw.TextStyle(fontSize: 7, color: PdfColors.blue900)),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
-        pw.Column(
-          crossAxisAlignment: pw.CrossAxisAlignment.end,
-          children: [
-            pw.Text('THE ABOVE COMPLETED IN GOOD ORDER', style: pw.TextStyle(fontSize: 9, fontWeight: pw.FontWeight.bold)),
-            pw.SizedBox(height: 40),
-            pw.Container(width: 150, decoration: const pw.BoxDecoration(border: pw.Border(top: pw.BorderSide(color: PdfColors.grey400)))),
-            pw.Text('SIGNATURE & STAMP', style: const pw.TextStyle(fontSize: 8)),
-          ],
+        pw.SizedBox(width: 20),
+        // Customer Box
+        pw.Container(
+          width: 240,
+          decoration: pw.BoxDecoration(
+            border: pw.Border.all(color: PdfColors.blue900, width: 1),
+            borderRadius: pw.BorderRadius.circular(8),
+          ),
+          child: pw.Column(
+            children: [
+              pw.Container(
+                height: 60, 
+                padding: const pw.EdgeInsets.all(10),
+              ),
+              pw.Container(height: 1, color: PdfColors.grey300),
+              pw.Container(
+                padding: const pw.EdgeInsets.all(5),
+                child: pw.Column(
+                  children: [
+                    pw.Text('CUSTOMER ACKNOWLEDGMENT', style: pw.TextStyle(fontSize: 8, fontWeight: pw.FontWeight.bold, color: PdfColors.blue900)),
+                    pw.Text(site.partnerName.toUpperCase(), style: pw.TextStyle(fontSize: 7, color: PdfColors.blue900)),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
       ],
     );

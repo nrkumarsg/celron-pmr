@@ -3,7 +3,7 @@ import '../models/asset.dart';
 import '../models/site.dart';
 import '../models/company.dart';
 import '../models/inspection.dart';
-import '../services/database_service.dart';
+import '../services/supabase_service.dart';
 import '../services/pdf_service.dart';
 import 'package:printing/printing.dart';
 import 'package:intl/intl.dart';
@@ -22,7 +22,7 @@ class AssetDetailScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final db = DatabaseService();
+    final db = SupabaseService();
 
     return Scaffold(
       appBar: AppBar(
@@ -35,6 +35,9 @@ class AssetDetailScreen extends StatelessWidget {
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
+          }
+          if (snapshot.hasError) {
+            return Center(child: Text('Error: ${snapshot.error}'));
           }
           
           final inspections = snapshot.data ?? [];
@@ -119,7 +122,7 @@ class AssetDetailScreen extends StatelessWidget {
           _infoRow('Hz', asset.hz.toString()),
           _infoRow('Frequency (RPM/Hz)', (asset.hz != 0 ? (asset.rpm / asset.hz).toStringAsFixed(2) : '0.0')),
           const Divider(),
-          _infoRow('Customer', site.customerName),
+          _infoRow('Partner', site.partnerName),
           _infoRow('Site', site.name),
           _infoRow('Address', site.address),
         ],

@@ -2,23 +2,23 @@ class Site {
   final String id;
   final String companyId;
   final String name; // Site Name
-  final String customerName;
+  final String partnerName;
   final String address;
 
   Site({
     required this.id,
     required this.companyId,
     required this.name,
-    required this.customerName,
+    required this.partnerName,
     required this.address,
   });
 
   Map<String, dynamic> toMap() {
     return {
       'id': id,
-      'companyId': companyId,
+      'company_id': companyId,
       'name': name,
-      'customerName': customerName,
+      'partner_name': partnerName,
       'address': address,
     };
   }
@@ -26,9 +26,9 @@ class Site {
   factory Site.fromMap(Map<String, dynamic> map) {
     return Site(
       id: map['id'] ?? '',
-      companyId: map['companyId'] ?? '',
+      companyId: map['company_id'] ?? map['companyId'] ?? '',
       name: map['name'] ?? '',
-      customerName: map['customerName'] ?? '',
+      partnerName: map['partner_name'] ?? map['customerName'] ?? '',
       address: map['address'] ?? '',
     );
   }

@@ -49,4 +49,12 @@ class HealthLogic {
         return "CRITICAL";
     }
   }
+
+  static String getClass(double kw) {
+    if (kw <= 0) return "Unknown";
+    if (kw <= 15) return "Class I";
+    if (kw <= 75) return "Class II";
+    if (kw <= 300) return "Class III"; // Typical range for Class III (Rigid) or IV (Soft)
+    return "Class IV"; // Or V/VI for larger
+  }
 }

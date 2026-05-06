@@ -8,6 +8,7 @@ class Asset {
   final String location; // e.g. L3
   final double rpm;
   final double hz;
+  final double powerKw;
 
   Asset({
     required this.id,
@@ -19,6 +20,7 @@ class Asset {
     required this.location,
     this.rpm = 0.0,
     this.hz = 0.0,
+    this.powerKw = 0.0,
   });
 
   String get systemName => name;
@@ -34,6 +36,7 @@ class Asset {
       'location': location,
       'rpm': rpm,
       'hz': hz,
+      'power_kw': powerKw,
     };
   }
 
@@ -48,6 +51,7 @@ class Asset {
       location: map['location'] ?? '',
       rpm: (map['rpm'] ?? 0.0).toDouble(),
       hz: (map['hz'] ?? 0.0).toDouble(),
+      powerKw: (map['power_kw'] ?? 0.0).toDouble(),
     );
   }
 }

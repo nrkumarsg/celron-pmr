@@ -36,6 +36,12 @@ class KnowledgeBaseScreen extends StatelessWidget {
             ),
             _buildISOChart(),
             const SizedBox(height: 16),
+            _buildSectionTitle('2b. ISO 10816-1 Severity Matrix'),
+            _buildISOSeverityMatrix(),
+            const SizedBox(height: 16),
+            _buildSectionTitle('2c. Detailed ISO 10816 Machine Classes'),
+            _buildISO10816Detailed(),
+            const SizedBox(height: 16),
             _buildSectionTitle('3. The Math: Converting g to mm/s'),
             _buildContentCard(
               'The Formula',
@@ -176,6 +182,146 @@ class KnowledgeBaseScreen extends StatelessWidget {
           const SizedBox(width: 8),
           Expanded(child: Text(label)),
           Text(value, style: const TextStyle(fontWeight: FontWeight.bold)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildISO10816Detailed() {
+    return Column(
+      children: [
+        _classLimitsTable(
+          'Machine Class: 1',
+          'Small machines (up to 15 kW)',
+          '1.8', '4.5',
+        ),
+        _classLimitsTable(
+          'Machine Class: 2',
+          'Medium-sized machines (15 to 75 kW)',
+          '2.8', '7.1',
+        ),
+        _classLimitsTable(
+          'Machine Class: 3',
+          'Large machines on rigid foundations',
+          '4.5', '11.2',
+        ),
+        _classLimitsTable(
+          'Machine Class: 4',
+          'Large machines on soft foundations',
+          '7.1', '18.0',
+        ),
+        _classLimitsTable(
+          'Machine Class: 5',
+          'Reciprocating machines (Rigid)',
+          '11.1', '28.0',
+        ),
+        _classLimitsTable(
+          'Machine Class: 6',
+          'Special machines (Slack coupled)',
+          '18.0', '45.0',
+        ),
+      ],
+    );
+  }
+
+  Widget _buildISOSeverityMatrix() {
+    return Card(
+      elevation: 3,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      child: Column(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: const BoxDecoration(
+              color: Color(0xFF003366),
+              borderRadius: BorderRadius.only(topLeft: Radius.circular(10), topRight: Radius.circular(10)),
+            ),
+            child: const Center(child: Text('ISO 10816-1 Velocity Severity', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold))),
+          ),
+          Table(
+            border: TableBorder.all(color: Colors.grey[300]!),
+            children: [
+              _matrixHeader(),
+              _matrixRow('0.28 - 0.71', [Colors.green, Colors.green, Colors.green, Colors.green], 'Good'),
+              _matrixRow('1.12 - 1.80', [Colors.white, Colors.white, Colors.green, Colors.green], 'Satisfactory'),
+              _matrixRow('2.80 - 4.50', [Colors.yellow, Colors.yellow, Colors.white, Colors.white], 'Alert'),
+              _matrixRow('7.10 - 11.20', [Colors.red, Colors.red, Colors.yellow, Colors.yellow], 'Alarm'),
+              _matrixRow('18.00 - 45.00', [Colors.red, Colors.red, Colors.red, Colors.red], 'Critical'),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  TableRow _matrixHeader() {
+    return const TableRow(
+      children: [
+        Padding(padding: EdgeInsets.all(4), child: Text('mm/s', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold))),
+        Padding(padding: EdgeInsets.all(4), child: Text('Class I', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold))),
+        Padding(padding: EdgeInsets.all(4), child: Text('Class II', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold))),
+        Padding(padding: EdgeInsets.all(4), child: Text('Class III', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold))),
+        Padding(padding: EdgeInsets.all(4), child: Text('Class IV', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold))),
+      ],
+    );
+  }
+
+  TableRow _matrixRow(String range, List<Color> colors, String label) {
+    return TableRow(
+      children: [
+        Padding(padding: const EdgeInsets.all(8), child: Text(range, style: const TextStyle(fontSize: 9))),
+        ...colors.map((c) => Container(height: 30, color: c)),
+      ],
+    );
+  }
+
+  Widget _classLimitsTable(String title, String desc, String normal, String marginal) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            width: double.infinity,
+            color: const Color(0xFF003366).withOpacity(0.1),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title, style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF003366))),
+                Text(desc, style: const TextStyle(fontSize: 12, color: Colors.grey)),
+              ],
+            ),
+          ),
+          Table(
+            border: TableBorder.all(color: Colors.grey[300]!),
+            children: [
+              const TableRow(
+                children: [
+                  Padding(padding: EdgeInsets.all(8), child: Text('Vibration Level', style: TextStyle(fontWeight: FontWeight.bold))),
+                  Padding(padding: EdgeInsets.all(8), child: Text('Condition', style: TextStyle(fontWeight: FontWeight.bold))),
+                ],
+              ),
+              TableRow(
+                children: [
+                  Padding(padding: EdgeInsets.all(8), child: Text('Up to $normal mm/s')),
+                  const Padding(padding: EdgeInsets.all(8), child: Text('Normal', style: TextStyle(color: Colors.green))),
+                ],
+              ),
+              TableRow(
+                children: [
+                  Padding(padding: EdgeInsets.all(8), child: Text('$normal to $marginal mm/s')),
+                  const Padding(padding: EdgeInsets.all(8), child: Text('Marginal', style: TextStyle(color: Colors.orange))),
+                ],
+              ),
+              TableRow(
+                children: [
+                  Padding(padding: EdgeInsets.all(8), child: Text('Above $marginal mm/s')),
+                  const Padding(padding: EdgeInsets.all(8), child: Text('Critical', style: TextStyle(color: Colors.red))),
+                ],
+              ),
+            ],
+          ),
         ],
       ),
     );

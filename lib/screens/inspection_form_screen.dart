@@ -5,7 +5,7 @@ import '../models/inspection.dart';
 import '../models/company.dart';
 import '../models/site.dart';
 import 'pdf_preview_screen.dart';
-import '../services/database_service.dart';
+import '../services/supabase_service.dart';
 import '../services/storage_service.dart';
 import '../services/pdf_service.dart';
 import '../logic/health_logic.dart';
@@ -35,14 +35,14 @@ class _InspectionFormScreenState extends State<InspectionFormScreen> {
   late Map<String, dynamic> _pipeParams;
 
   final _projectRefController = TextEditingController(text: 'PRJ-2025-001');
-  final _customerRefController = TextEditingController(text: 'CUST-REF-001');
+  final _partnerRefController = TextEditingController(text: 'PART-REF-001');
   final _inspectionByController = TextEditingController(text: 'Service Engineer');
   final _quarterlyCycleController = TextEditingController(text: 'Q1-2025');
 
   @override
   void dispose() {
     _projectRefController.dispose();
-    _customerRefController.dispose();
+    _partnerRefController.dispose();
     _inspectionByController.dispose();
     _quarterlyCycleController.dispose();
     super.dispose();
@@ -158,31 +158,36 @@ class _InspectionFormScreenState extends State<InspectionFormScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Customer: Customer Name: ${widget.site.customerName}',
+            'Partner: ${widget.site.partnerName}',
             style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
           ),
           const SizedBox(height: 4),
           Text(
-            'Site: Site Name: ${widget.site.name}',
+            'Site: ${widget.site.name}',
             style: const TextStyle(fontSize: 13),
           ),
           const SizedBox(height: 2),
           Text(
-            'Address: Address: ${widget.site.address}',
+            'Address: ${widget.site.address}',
             style: const TextStyle(fontSize: 12, color: Colors.grey),
           ),
           const Divider(height: 24),
           Text(
-            'System: System Name: ${widget.asset.name}',
+            'System: ${widget.asset.name}',
             style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF003366)),
           ),
           Text(
-            'Ref: System Reference: ${widget.asset.reference}',
+            'Ref: ${widget.asset.reference}',
             style: const TextStyle(fontSize: 13),
           ),
           Text(
-            'Loc: Asset Location: ${widget.asset.location}',
+            'Loc: ${widget.asset.location}',
             style: const TextStyle(fontSize: 13),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'Machine Class: ${HealthLogic.getClass(widget.asset.powerKw)} (${widget.asset.powerKw} kW)',
+            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.blueGrey),
           ),
         ],
       ),
@@ -244,8 +249,8 @@ class _InspectionFormScreenState extends State<InspectionFormScreen> {
             ),
             const SizedBox(height: 16),
             TextFormField(
-              controller: _customerRefController,
-              decoration: const InputDecoration(labelText: 'Customer Ref', border: OutlineInputBorder(), prefixIcon: Icon(Icons.badge)),
+              controller: _partnerRefController,
+              decoration: const InputDecoration(labelText: 'Partner Ref', border: OutlineInputBorder(), prefixIcon: Icon(Icons.badge)),
             ),
             const SizedBox(height: 16),
             TextFormField(
@@ -475,7 +480,7 @@ class _InspectionFormScreenState extends State<InspectionFormScreen> {
         assetId: widget.asset.id,
         date: DateTime.now(),
         projectRef: _projectRefController.text,
-        customerRef: _customerRefController.text,
+        partnerRef: _partnerRefController.text,
         inspectionBy: _inspectionByController.text,
         quarterlyCycle: _quarterlyCycleController.text,
         vibrationG: _vibrationG,
@@ -489,7 +494,7 @@ class _InspectionFormScreenState extends State<InspectionFormScreen> {
         overallStatus: _overallStatus,
       );
 
-      await DatabaseService().saveInspection(inspection);
+      await SupabaseService().saveInspection(inspection);
 
       final pdfData = await PdfService.generateInspectionPdf(
         company: company,

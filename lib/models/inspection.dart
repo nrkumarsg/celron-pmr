@@ -5,7 +5,7 @@ class Inspection {
   final String assetId;
   final DateTime date;
   final String projectRef;
-  final String customerRef;
+  final String partnerRef;
   final String inspectionBy;
   final String quarterlyCycle; // e.g. Q1-24
   final double vibrationG;
@@ -23,7 +23,7 @@ class Inspection {
     required this.assetId,
     required this.date,
     required this.projectRef,
-    required this.customerRef,
+    required this.partnerRef,
     required this.inspectionBy,
     required this.quarterlyCycle,
     required this.vibrationG,
@@ -40,42 +40,42 @@ class Inspection {
   Map<String, dynamic> toMap() {
     return {
       'id': id,
-      'assetId': assetId,
-      'date': Timestamp.fromDate(date),
-      'projectRef': projectRef,
-      'customerRef': customerRef,
-      'inspectionBy': inspectionBy,
-      'quarterlyCycle': quarterlyCycle,
-      'vibrationG': vibrationG,
-      'temperatureC': temperatureC,
-      'vibrationImgUrl': vibrationImgUrl,
-      'tempImgUrl': tempImgUrl,
-      'motorParameters': motorParameters,
-      'pumpParameters': pumpParameters,
-      'pipeParameters': pipeParameters,
-      'otherParameters': otherParameters,
-      'overallStatus': overallStatus,
+      'asset_id': assetId,
+      'date': date.toIso8601String(),
+      'project_ref': projectRef,
+      'partner_ref': partnerRef,
+      'inspection_by': inspectionBy,
+      'quarterly_cycle': quarterlyCycle,
+      'vibration_g': vibrationG,
+      'temperature_c': temperatureC,
+      'vibration_img_url': vibrationImgUrl,
+      'temp_img_url': tempImgUrl,
+      'motor_parameters': motorParameters,
+      'pump_parameters': pumpParameters,
+      'pipe_parameters': pipeParameters,
+      'other_parameters': otherParameters,
+      'overall_status': overallStatus,
     };
   }
 
   factory Inspection.fromMap(Map<String, dynamic> map, String id) {
     return Inspection(
       id: id,
-      assetId: map['assetId'],
-      date: (map['date'] as Timestamp).toDate(),
-      projectRef: map['projectRef'] ?? '',
-      customerRef: map['customerRef'] ?? '',
-      inspectionBy: map['inspectionBy'] ?? '',
-      quarterlyCycle: map['quarterlyCycle'] ?? '',
-      vibrationG: (map['vibrationG'] as num).toDouble(),
-      temperatureC: (map['temperatureC'] as num).toDouble(),
-      vibrationImgUrl: map['vibrationImgUrl'],
-      tempImgUrl: map['tempImgUrl'],
-      motorParameters: Map<String, dynamic>.from(map['motorParameters'] ?? {}),
-      pumpParameters: Map<String, dynamic>.from(map['pumpParameters'] ?? {}),
-      pipeParameters: Map<String, dynamic>.from(map['pipeParameters'] ?? {}),
-      otherParameters: Map<String, dynamic>.from(map['otherParameters'] ?? {}),
-      overallStatus: map['overallStatus'],
+      assetId: map['asset_id'] ?? map['assetId'],
+      date: map['date'] is String ? DateTime.parse(map['date']) : (map['date'] as Timestamp).toDate(),
+      projectRef: map['project_ref'] ?? map['projectRef'] ?? '',
+      partnerRef: map['partner_ref'] ?? map['partnerRef'] ?? map['customerRef'] ?? '',
+      inspectionBy: map['inspection_by'] ?? map['inspectionBy'] ?? '',
+      quarterlyCycle: map['quarterly_cycle'] ?? map['quarterlyCycle'] ?? '',
+      vibrationG: (map['vibration_g'] ?? map['vibrationG'] as num).toDouble(),
+      temperatureC: (map['temperature_c'] ?? map['temperatureC'] as num).toDouble(),
+      vibrationImgUrl: map['vibration_img_url'] ?? map['vibrationImgUrl'],
+      tempImgUrl: map['temp_img_url'] ?? map['tempImgUrl'],
+      motorParameters: Map<String, dynamic>.from(map['motor_parameters'] ?? map['motorParameters'] ?? {}),
+      pumpParameters: Map<String, dynamic>.from(map['pump_parameters'] ?? map['pumpParameters'] ?? {}),
+      pipeParameters: Map<String, dynamic>.from(map['pipe_parameters'] ?? map['pipeParameters'] ?? {}),
+      otherParameters: Map<String, dynamic>.from(map['other_parameters'] ?? map['otherParameters'] ?? {}),
+      overallStatus: map['overall_status'] ?? map['overallStatus'],
     );
   }
 }

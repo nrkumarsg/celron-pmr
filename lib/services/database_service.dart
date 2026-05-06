@@ -17,6 +17,15 @@ class DatabaseService {
     await _db.collection('sites').doc(site.id).set(site.toMap());
   }
 
+  Future<void> deleteSite(String siteId) async {
+    await _db.collection('sites').doc(siteId).delete();
+    // Delete all assets and their inspections for this site
+    final assets = await _db.collection('assets').where('siteId', isEqualTo: siteId).get();
+    for (var doc in assets.docs) {
+      await deleteAsset(doc.id);
+    }
+  }
+
   // --- Assets ---
   Stream<List<Asset>> getAssets(String siteId) {
     return _db

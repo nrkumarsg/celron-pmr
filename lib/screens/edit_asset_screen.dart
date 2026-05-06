@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/asset.dart';
-import '../services/database_service.dart';
+import '../services/supabase_service.dart';
 
 class EditAssetScreen extends StatefulWidget {
   final String siteId;
@@ -19,6 +19,9 @@ class _EditAssetScreenState extends State<EditAssetScreen> {
   final _typeController = TextEditingController();
   final _modelController = TextEditingController();
   final _locationController = TextEditingController();
+  final _rpmController = TextEditingController();
+  final _hzController = TextEditingController();
+  final _powerKwController = TextEditingController();
 
   @override
   void initState() {
@@ -29,6 +32,13 @@ class _EditAssetScreenState extends State<EditAssetScreen> {
       _typeController.text = widget.asset!.type;
       _modelController.text = widget.asset!.model;
       _locationController.text = widget.asset!.location;
+      _rpmController.text = widget.asset!.rpm.toString();
+      _hzController.text = widget.asset!.hz.toString();
+      _powerKwController.text = widget.asset!.powerKw.toString();
+    } else {
+      _rpmController.text = '0.0';
+      _hzController.text = '0.0';
+      _powerKwController.text = '0.0';
     }
   }
 
@@ -72,6 +82,32 @@ class _EditAssetScreenState extends State<EditAssetScreen> {
                 controller: _locationController,
                 decoration: const InputDecoration(labelText: 'Asset Location (e.g. L3, Roof)', border: OutlineInputBorder()),
               ),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextFormField(
+                      controller: _rpmController,
+                      decoration: const InputDecoration(labelText: 'RPM', border: OutlineInputBorder()),
+                      keyboardType: TextInputType.number,
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: TextFormField(
+                      controller: _hzController,
+                      decoration: const InputDecoration(labelText: 'Hz', border: OutlineInputBorder()),
+                      keyboardType: TextInputType.number,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _powerKwController,
+                decoration: const InputDecoration(labelText: 'Power (kW)', border: OutlineInputBorder()),
+                keyboardType: TextInputType.number,
+              ),
               const SizedBox(height: 32),
               ElevatedButton(
                 style: ElevatedButton.styleFrom(
@@ -89,8 +125,11 @@ class _EditAssetScreenState extends State<EditAssetScreen> {
                       type: _typeController.text,
                       model: _modelController.text,
                       location: _locationController.text,
+                      rpm: double.tryParse(_rpmController.text) ?? 0.0,
+                      hz: double.tryParse(_hzController.text) ?? 0.0,
+                      powerKw: double.tryParse(_powerKwController.text) ?? 0.0,
                     );
-                    await DatabaseService().saveAsset(asset);
+                    await SupabaseService().saveAsset(asset);
                     if (mounted) Navigator.pop(context);
                   }
                 },
