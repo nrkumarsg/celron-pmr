@@ -31,8 +31,7 @@ migrate_working_dir/
 .pub-cache/
 .pub/
 /build/
-/public/
-!/public/**
+!/public/
 /coverage/
 
 # Symbolication related
