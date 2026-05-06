@@ -3,7 +3,8 @@ import '../models/asset.dart';
 import '../models/site.dart';
 import '../models/company.dart';
 import '../models/inspection.dart';
-import '../services/supabase_service.dart';
+import '../domain/repositories/inspection_repository.dart';
+import 'package:get_it/get_it.dart';
 import '../services/pdf_service.dart';
 import 'package:printing/printing.dart';
 import 'package:intl/intl.dart';
@@ -22,7 +23,7 @@ class AssetDetailScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final db = SupabaseService();
+    final inspectionRepo = GetIt.instance<InspectionRepository>();
 
     return Scaffold(
       appBar: AppBar(
@@ -31,7 +32,7 @@ class AssetDetailScreen extends StatelessWidget {
         foregroundColor: Colors.white,
       ),
       body: StreamBuilder<List<Inspection>>(
-        stream: db.getInspections(asset.id),
+        stream: inspectionRepo.getInspectionsStream(asset.id),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());

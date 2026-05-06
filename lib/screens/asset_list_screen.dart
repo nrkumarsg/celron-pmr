@@ -9,7 +9,9 @@ import '../models/site.dart';
 import '../models/asset.dart';
 import '../models/company.dart';
 import '../models/inspection.dart';
-import '../services/database_service.dart';
+import '../domain/repositories/asset_repository.dart';
+import '../domain/repositories/inspection_repository.dart';
+import 'package:get_it/get_it.dart';
 import '../services/pdf_service.dart';
 import 'inspection_form_screen.dart';
 import 'edit_asset_screen.dart';
@@ -26,7 +28,8 @@ class AssetListScreen extends StatefulWidget {
 }
 
 class _AssetListScreenState extends State<AssetListScreen> {
-  final DatabaseService _db = DatabaseService();
+  final AssetRepository _assetRepo = GetIt.instance<AssetRepository>();
+  final InspectionRepository _inspectionRepo = GetIt.instance<InspectionRepository>();
 
   Future<void> _importAssets() async {
     try {
@@ -53,7 +56,7 @@ class _AssetListScreenState extends State<AssetListScreen> {
               type: row[3].toString(),
               location: row[4].toString(),
             );
-            await _db.saveAsset(asset);
+            await _assetRepo.saveAsset(asset);
           }
         }
         if (mounted) {
@@ -99,7 +102,7 @@ class _AssetListScreenState extends State<AssetListScreen> {
     try {
       List<Map<String, dynamic>> assetData = [];
       for (var asset in assets) {
-        final inspection = await _db.getLatestInspection(asset.id);
+        final inspection = await _inspectionRepo.getLatestInspection(asset.id);
         if (inspection != null) {
           assetData.add({'asset': asset, 'inspection': inspection});
         }
@@ -126,7 +129,7 @@ class _AssetListScreenState extends State<AssetListScreen> {
     try {
       List<Map<String, dynamic>> assetData = [];
       for (var asset in assets) {
-        final inspection = await _db.getLatestInspection(asset.id);
+        final inspection = await _inspectionRepo.getLatestInspection(asset.id);
         if (inspection != null) {
           assetData.add({'asset': asset, 'inspection': inspection});
         }
@@ -164,7 +167,7 @@ class _AssetListScreenState extends State<AssetListScreen> {
             onPressed: () => _importAssets(),
           ),
           StreamBuilder<List<Asset>>(
-            stream: _db.getAssets(widget.site.id),
+            stream: _assetRepo.getAssetsStream(widget.site.id),
             builder: (context, snapshot) {
               return IconButton(
                 icon: const Icon(Icons.download),
@@ -181,7 +184,7 @@ class _AssetListScreenState extends State<AssetListScreen> {
           _buildActionButtons(),
           Expanded(
             child: StreamBuilder<List<Asset>>(
-              stream: _db.getAssets(widget.site.id),
+              stream: _assetRepo.getAssetsStream(widget.site.id),
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return const Center(child: CircularProgressIndicator());
@@ -237,7 +240,7 @@ class _AssetListScreenState extends State<AssetListScreen> {
           Expanded(
             child: ElevatedButton.icon(
               onPressed: () async {
-                final assets = await _db.getAssets(widget.site.id).first;
+                final assets = await _assetRepo.getAssets(widget.site.id);
                 _printContinuous(assets);
               },
               icon: const Icon(Icons.print),
@@ -249,7 +252,7 @@ class _AssetListScreenState extends State<AssetListScreen> {
           Expanded(
             child: ElevatedButton.icon(
               onPressed: () async {
-                final assets = await _db.getAssets(widget.site.id).first;
+                final assets = await _assetRepo.getAssets(widget.site.id);
                 _printVisitReport(assets);
               },
               icon: const Icon(Icons.description),
@@ -370,7 +373,7 @@ class _AssetListScreenState extends State<AssetListScreen> {
                       rpm: double.tryParse(rpmController.text) ?? 0.0,
                       hz: double.tryParse(hzController.text) ?? 0.0,
                     );
-                    await _db.saveAsset(asset);
+                    await _assetRepo.saveAsset(asset);
                     if (mounted) Navigator.pop(context);
                   }
                 },
@@ -448,7 +451,7 @@ class _AssetListScreenState extends State<AssetListScreen> {
                     rpm: double.tryParse(rpmController.text) ?? 0.0,
                     hz: double.tryParse(hzController.text) ?? 0.0,
                   );
-                  await _db.saveAsset(updatedAsset);
+                  await _assetRepo.saveAsset(updatedAsset);
                   if (mounted) Navigator.pop(context);
                 },
                 child: const Text('Save'),
@@ -461,7 +464,7 @@ class _AssetListScreenState extends State<AssetListScreen> {
   }
 
   Future<void> _printSingle(Asset asset) async {
-    final inspection = await _db.getLatestInspection(asset.id);
+    final inspection = await _inspectionRepo.getLatestInspection(asset.id);
     if (inspection == null) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('No inspection data found.')));
       return;
@@ -471,7 +474,7 @@ class _AssetListScreenState extends State<AssetListScreen> {
   }
 
   Future<void> _downloadSingle(Asset asset) async {
-    final inspection = await _db.getLatestInspection(asset.id);
+    final inspection = await _inspectionRepo.getLatestInspection(asset.id);
     if (inspection == null) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('No inspection data found.')));
       return;
@@ -489,7 +492,7 @@ class _AssetListScreenState extends State<AssetListScreen> {
         actions: [
           TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
           TextButton(onPressed: () async {
-            await _db.deleteAsset(asset.id);
+            await _assetRepo.deleteAsset(asset.id);
             Navigator.pop(context);
           }, child: const Text('Delete', style: TextStyle(color: Colors.red))),
         ],

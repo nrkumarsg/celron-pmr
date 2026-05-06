@@ -10,7 +10,7 @@ class Company {
   final String brn;
   final String gstReg;
 
-  Company({
+  const Company({
     required this.id,
     required this.name,
     required this.regOffice,

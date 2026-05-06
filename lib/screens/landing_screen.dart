@@ -25,9 +25,9 @@ class LandingScreen extends StatelessWidget {
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
                 colors: [
-                  const Color(0xFF003366).withOpacity(0.8),
-                  const Color(0xFF003366).withOpacity(0.6),
-                  Colors.black.withOpacity(0.8),
+                  Theme.of(context).colorScheme.primary.withOpacity(0.8),
+                  Theme.of(context).colorScheme.primary.withOpacity(0.6),
+                  Colors.black.withOpacity(0.9),
                 ],
               ),
             ),
@@ -91,14 +91,11 @@ class LandingScreen extends StatelessWidget {
                           MaterialPageRoute(builder: (context) => DashboardScreen()),
                         );
                       },
+                      // The style is mostly inherited from RuggedTheme now
+                      // but we can add specific padding if needed.
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFFCC0000), // Brand Red
-                        foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(horizontal: 60, vertical: 20),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(30),
-                        ),
-                        elevation: 10,
+                        elevation: 8,
                       ),
                       child: const Row(
                         mainAxisSize: MainAxisSize.min,

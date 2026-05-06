@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:get_it/get_it.dart';
 import '../models/site.dart';
-import '../services/supabase_service.dart';
+import '../domain/repositories/site_repository.dart';
 import 'asset_list_screen.dart';
-import '../models/company.dart';
+import '../core/celron_company.dart';
 
 class DashboardScreen extends StatelessWidget {
-  final SupabaseService _databaseService = SupabaseService();
+  final SiteRepository _siteRepository = GetIt.instance<SiteRepository>();
   DashboardScreen({super.key});
 
   void _showAddSiteDialog(BuildContext context, {Site? site}) {
@@ -27,7 +28,7 @@ class DashboardScreen extends StatelessWidget {
                   if (textEditingValue.text == '') {
                     return const Iterable<String>.empty();
                   }
-                  return await _databaseService.getPartnerSuggestions(textEditingValue.text);
+                  return await _siteRepository.getPartnerSuggestions(textEditingValue.text);
                 },
                 onSelected: (String selection) {
                   partnerController.text = selection;
@@ -75,7 +76,7 @@ class DashboardScreen extends StatelessWidget {
                 partnerName: partnerController.text,
                 address: addressController.text,
               );
-              await _databaseService.saveSite(newSite);
+              await _siteRepository.saveSite(newSite);
               if (context.mounted) Navigator.pop(context);
             },
             child: const Text('Save'),
@@ -87,20 +88,8 @@ class DashboardScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Note: getCompany still uses old DatabaseService if needed, or we can mock it
-    // For now, let's keep the mock company data as fallback
-    final company = Company(
-      id: 'celron',
-      name: 'CEL-RON PARTNERS',
-      regOffice: 'Singapore',
-      phone: '+65 1234 5678',
-      fax: '+65 1234 5679',
-      mobile: '+65 9876 5432',
-      email: 'info@celron.com',
-      web: 'www.celron.com',
-      brn: 'BRN123456',
-      gstReg: 'GST123456',
-    );
+    // Use the single, authoritative company data
+    final company = CelRonCompany.instance;
 
     return Scaffold(
       appBar: AppBar(
@@ -157,7 +146,7 @@ class DashboardScreen extends StatelessWidget {
             ),
             Expanded(
               child: StreamBuilder<List<Site>>(
-                stream: _databaseService.getSites(),
+                stream: _siteRepository.getSitesStream(),
                 builder: (context, snapshot) {
                   if (snapshot.connectionState == ConnectionState.waiting) {
                     return const Center(child: CircularProgressIndicator());
@@ -272,7 +261,7 @@ class DashboardScreen extends StatelessWidget {
           ),
           TextButton(
             onPressed: () async {
-              await _databaseService.deleteSite(site.id);
+              await _siteRepository.deleteSite(site.id);
               if (context.mounted) {
                 Navigator.pop(context);
                 ScaffoldMessenger.of(context).showSnackBar(

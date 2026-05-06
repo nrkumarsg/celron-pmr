@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/asset.dart';
-import '../services/supabase_service.dart';
+import '../domain/repositories/asset_repository.dart';
+import 'package:get_it/get_it.dart';
 
 class EditAssetScreen extends StatefulWidget {
   final String siteId;
@@ -13,6 +14,7 @@ class EditAssetScreen extends StatefulWidget {
 }
 
 class _EditAssetScreenState extends State<EditAssetScreen> {
+  final AssetRepository _assetRepo = GetIt.instance<AssetRepository>();
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   final _refController = TextEditingController();
@@ -129,7 +131,7 @@ class _EditAssetScreenState extends State<EditAssetScreen> {
                       hz: double.tryParse(_hzController.text) ?? 0.0,
                       powerKw: double.tryParse(_powerKwController.text) ?? 0.0,
                     );
-                    await SupabaseService().saveAsset(asset);
+                    await _assetRepo.saveAsset(asset);
                     if (mounted) Navigator.pop(context);
                   }
                 },

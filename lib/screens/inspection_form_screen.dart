@@ -2,14 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import '../models/asset.dart';
 import '../models/inspection.dart';
-import '../models/company.dart';
 import '../models/site.dart';
 import 'pdf_preview_screen.dart';
-import '../services/supabase_service.dart';
+import '../domain/repositories/inspection_repository.dart';
+import 'package:get_it/get_it.dart';
 import '../services/storage_service.dart';
+import '../core/celron_company.dart';
 import '../services/pdf_service.dart';
 import '../logic/health_logic.dart';
-import 'dart:typed_data';
 
 class InspectionFormScreen extends StatefulWidget {
   final Asset asset;
@@ -22,6 +22,7 @@ class InspectionFormScreen extends StatefulWidget {
 }
 
 class _InspectionFormScreenState extends State<InspectionFormScreen> {
+  final InspectionRepository _inspectionRepo = GetIt.instance<InspectionRepository>();
   final _picker = ImagePicker();
   XFile? _vibrationImg;
   XFile? _tempImg;
@@ -460,18 +461,7 @@ class _InspectionFormScreenState extends State<InspectionFormScreen> {
         tempUrl = await StorageService().uploadImage(_tempImg!, 'inspections/${widget.asset.reference}_temp.jpg');
       }
 
-      final company = Company(
-        id: 'celron',
-        name: 'CEL-RON Enterprises Pte Ltd',
-        regOffice: '14, Robinson Road, #08-01A, Far East Finance Building, Singapore 048545',
-        phone: '+65 66181721',
-        fax: '+65 63334636',
-        mobile: '+65 97685891',
-        email: 'sales@celron.net',
-        web: 'www.celron.net',
-        brn: '201436227C',
-        gstReg: '201436227C',
-      );
+      final company = CelRonCompany.instance;
 
       final site = widget.site;
 
@@ -494,7 +484,7 @@ class _InspectionFormScreenState extends State<InspectionFormScreen> {
         overallStatus: _overallStatus,
       );
 
-      await SupabaseService().saveInspection(inspection);
+      await _inspectionRepo.saveInspection(inspection);
 
       final pdfData = await PdfService.generateInspectionPdf(
         company: company,

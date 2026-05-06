@@ -6,6 +6,8 @@ import 'screens/dashboard_screen.dart';
 import 'screens/knowledge_base_screen.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'core/theme.dart';
+import 'injection_container.dart' as di;
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -22,6 +24,10 @@ void main() async {
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
+
+  // Initialize Dependency Injection
+  await di.init();
+
   runApp(const MyApp());
 }
 
@@ -33,16 +39,7 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: 'CelRon Preventive Maintenance',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        primaryColor: const Color(0xFF003366),
-        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF003366)),
-        useMaterial3: true,
-        appBarTheme: const AppBarTheme(
-          backgroundColor: Color(0xFF003366),
-          foregroundColor: Colors.white,
-          elevation: 0,
-        ),
-      ),
+      theme: RuggedTheme.theme,
       initialRoute: '/',
       routes: {
         '/': (context) => const LandingScreen(),
