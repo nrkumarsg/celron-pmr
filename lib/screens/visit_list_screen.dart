@@ -6,6 +6,7 @@ import '../models/service_visit.dart';
 import '../domain/repositories/service_visit_repository.dart';
 import '../injection_container.dart';
 import 'asset_list_screen.dart';
+import 'visit_detail_screen.dart';
 
 class VisitListScreen extends StatefulWidget {
   final Site site;
@@ -165,16 +166,14 @@ class _VisitListScreenState extends State<VisitListScreen> {
             ],
           ],
         ),
-        trailing: const Icon(Icons.arrow_forward_ios, size: 18),
         onTap: () {
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (context) => AssetListScreen(
+              builder: (context) => VisitDetailScreen(
+                visit: visit,
                 site: widget.site,
                 company: widget.company,
-                visitId: visit.id,
-                visitLabel: visit.celronRef,
               ),
             ),
           );

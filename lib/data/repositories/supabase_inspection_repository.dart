@@ -92,6 +92,18 @@ class SupabaseInspectionRepository implements InspectionRepository {
   }
 
   @override
+  Stream<List<Inspection>> getInspectionsByVisit(String visitId) async* {
+    yield* _client
+        .from('inspections')
+        .stream(primaryKey: ['id'])
+        .eq('visit_id', visitId)
+        .order('date', ascending: false)
+        .map((data) {
+          return data.map((map) => Inspection.fromMap(map, map['id'])).toList();
+        });
+  }
+
+  @override
   Future<void> saveInspection(Inspection inspection) async {
     await _client.from('inspections').upsert(inspection.toMap());
   }

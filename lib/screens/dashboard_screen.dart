@@ -257,8 +257,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             Navigator.push(
                               context,
                               MaterialPageRoute(
-                                builder: (context) =>
-                                    VisitListScreen(site: site, company: company),
+                                builder: (context) => VisitListScreen(
+                                  site: site,
+                                  company: company,
+                                ),
                               ),
                             );
                           },

@@ -11,6 +11,9 @@ abstract class InspectionRepository {
   /// Fetch all inspections for a specific site (used for bulk reporting).
   Future<List<Inspection>> getAllInspectionsForSite(String siteId);
 
+  /// Fetch inspections linked to a specific maintenance visit.
+  Stream<List<Inspection>> getInspectionsByVisit(String visitId);
+
   /// Save or update an inspection report.
   Future<void> saveInspection(Inspection inspection);
 }
