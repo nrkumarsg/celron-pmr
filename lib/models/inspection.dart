@@ -1,5 +1,3 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
-
 class Inspection {
   final String id;
   final String assetId;
@@ -17,6 +15,7 @@ class Inspection {
   final Map<String, dynamic> pipeParameters;
   final Map<String, dynamic> otherParameters;
   final String overallStatus;
+  final String? visitId;
 
   Inspection({
     required this.id,
@@ -35,6 +34,7 @@ class Inspection {
     required this.pipeParameters,
     required this.otherParameters,
     required this.overallStatus,
+    this.visitId,
   });
 
   Map<String, dynamic> toMap() {
@@ -55,27 +55,29 @@ class Inspection {
       'pipe_parameters': pipeParameters,
       'other_parameters': otherParameters,
       'overall_status': overallStatus,
+      'visit_id': visitId,
     };
   }
 
   factory Inspection.fromMap(Map<String, dynamic> map, String id) {
     return Inspection(
       id: id,
-      assetId: map['asset_id'] ?? map['assetId'],
-      date: map['date'] is String ? DateTime.parse(map['date']) : (map['date'] as Timestamp).toDate(),
+      assetId: map['asset_id'] ?? map['assetId'] ?? '',
+      date: map['date'] != null ? DateTime.parse(map['date'].toString()) : DateTime.now(),
       projectRef: map['project_ref'] ?? map['projectRef'] ?? '',
       partnerRef: map['partner_ref'] ?? map['partnerRef'] ?? map['customerRef'] ?? '',
       inspectionBy: map['inspection_by'] ?? map['inspectionBy'] ?? '',
       quarterlyCycle: map['quarterly_cycle'] ?? map['quarterlyCycle'] ?? '',
-      vibrationG: (map['vibration_g'] ?? map['vibrationG'] as num).toDouble(),
-      temperatureC: (map['temperature_c'] ?? map['temperatureC'] as num).toDouble(),
+      vibrationG: (map['vibration_g'] ?? map['vibrationG'] ?? 0.0).toDouble(),
+      temperatureC: (map['temperature_c'] ?? map['temperatureC'] ?? 0.0).toDouble(),
       vibrationImgUrl: map['vibration_img_url'] ?? map['vibrationImgUrl'],
       tempImgUrl: map['temp_img_url'] ?? map['tempImgUrl'],
       motorParameters: Map<String, dynamic>.from(map['motor_parameters'] ?? map['motorParameters'] ?? {}),
       pumpParameters: Map<String, dynamic>.from(map['pump_parameters'] ?? map['pumpParameters'] ?? {}),
       pipeParameters: Map<String, dynamic>.from(map['pipe_parameters'] ?? map['pipeParameters'] ?? {}),
       otherParameters: Map<String, dynamic>.from(map['other_parameters'] ?? map['otherParameters'] ?? {}),
-      overallStatus: map['overall_status'] ?? map['overallStatus'],
+      overallStatus: map['overall_status'] ?? map['overallStatus'] ?? 'NORMAL',
+      visitId: map['visit_id'] ?? map['visitId'],
     );
   }
 }

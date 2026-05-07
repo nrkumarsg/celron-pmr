@@ -31,16 +31,73 @@
 
   <title>CEL-RON PMR</title>
   <link rel="manifest" href="manifest.json">
+  <style>
+    body {
+      background-color: #f5f7fa;
+      margin: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+    .loading-container {
+      text-align: center;
+    }
+    .logo-text {
+      font-size: 28px;
+      font-weight: bold;
+      color: #003366;
+      margin-bottom: 20px;
+      letter-spacing: 2px;
+    }
+    .loader {
+      width: 48px;
+      height: 48px;
+      border: 5px solid #003366;
+      border-bottom-color: transparent;
+      border-radius: 50%;
+      display: inline-block;
+      box-sizing: border-box;
+      animation: rotation 1s linear infinite;
+    }
+    @keyframes rotation {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    .loading-text {
+      margin-top: 15px;
+      color: #666;
+      font-size: 14px;
+    }
+  </style>
+  <script src="flutter.js" defer></script>
 </head>
 <body>
-  <!--
-    You can customize the "flutter_bootstrap.js" script.
-    This is useful to provide a custom configuration to the Flutter loader
-    or to give the user feedback during the initialization process.
+  <div id="loading-indicator" class="loading-container">
+    <div class="logo-text">CEL-RON PMR</div>
+    <div class="loader"></div>
+    <div class="loading-text">Initializing Industrial Systems...</div>
+  </div>
 
-    For more details:
-    * https://docs.flutter.dev/platform-integration/web/initialization
-  -->
-  <script src="flutter_bootstrap.js" async></script>
+  <script>
+    window.addEventListener('load', function(ev) {
+      // Wait for flutter.js to be ready
+      _flutter.loader.loadEntrypoint({
+        serviceWorker: {
+          serviceWorkerVersion: "{{flutter_service_worker_version}}",
+        },
+        onEntrypointLoaded: function(engineInitializer) {
+          engineInitializer.initializeEngine().then(function(appRunner) {
+            appRunner.runApp();
+            // Hide the loader once the app is running
+            setTimeout(function() {
+              document.getElementById('loading-indicator').style.display = 'none';
+            }, 500);
+          });
+        }
+      });
+    });
+  </script>
 </body>
 </html>

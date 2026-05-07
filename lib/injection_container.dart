@@ -6,6 +6,8 @@ import 'domain/repositories/asset_repository.dart';
 import 'data/repositories/supabase_asset_repository.dart';
 import 'domain/repositories/inspection_repository.dart';
 import 'data/repositories/supabase_inspection_repository.dart';
+import 'domain/repositories/service_visit_repository.dart';
+import 'data/repositories/supabase_service_visit_repository.dart';
 import 'data/datasources/local_cache_service.dart';
 
 final sl = GetIt.instance; // sl = Service Locator
@@ -32,6 +34,12 @@ Future<void> init() async {
           
   sl.registerLazySingleton<InspectionRepository>(
       () => SupabaseInspectionRepository(
+            client: sl(),
+            localCache: sl(),
+          ));
+
+  sl.registerLazySingleton<ServiceVisitRepository>(
+      () => SupabaseServiceVisitRepository(
             client: sl(),
             localCache: sl(),
           ));

@@ -11,11 +11,21 @@ import '../core/celron_company.dart';
 import '../services/pdf_service.dart';
 import '../logic/health_logic.dart';
 
+import '../models/service_visit.dart';
+
 class InspectionFormScreen extends StatefulWidget {
   final Asset asset;
   final Site site;
+  final String? visitId;
+  final ServiceVisit? visit;
 
-  const InspectionFormScreen({super.key, required this.asset, required this.site});
+  const InspectionFormScreen({
+    super.key, 
+    required this.asset, 
+    required this.site,
+    this.visitId,
+    this.visit,
+  });
 
   @override
   State<InspectionFormScreen> createState() => _InspectionFormScreenState();
@@ -35,8 +45,8 @@ class _InspectionFormScreenState extends State<InspectionFormScreen> {
   late Map<String, dynamic> _pumpParams;
   late Map<String, dynamic> _pipeParams;
 
-  final _projectRefController = TextEditingController(text: 'PRJ-2025-001');
-  final _partnerRefController = TextEditingController(text: 'PART-REF-001');
+  late TextEditingController _projectRefController;
+  late TextEditingController _partnerRefController;
   final _inspectionByController = TextEditingController(text: 'Service Engineer');
   final _quarterlyCycleController = TextEditingController(text: 'Q1-2025');
 
@@ -52,6 +62,8 @@ class _InspectionFormScreenState extends State<InspectionFormScreen> {
   @override
   void initState() {
     super.initState();
+    _projectRefController = TextEditingController(text: widget.visit?.celronRef ?? 'PRJ-2025-001');
+    _partnerRefController = TextEditingController(text: widget.visit?.customerRef ?? 'PART-REF-001');
     _initializeDefaults();
     _updateStatus();
   }
@@ -482,6 +494,7 @@ class _InspectionFormScreenState extends State<InspectionFormScreen> {
         pipeParameters: _pipeParams,
         otherParameters: {},
         overallStatus: _overallStatus,
+        visitId: widget.visitId,
       );
 
       await _inspectionRepo.saveInspection(inspection);

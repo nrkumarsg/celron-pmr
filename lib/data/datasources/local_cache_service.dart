@@ -1,54 +1,56 @@
 import 'dart:convert';
-import 'dart:io';
-import 'package:path_provider/path_provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
+/// A cross-platform local cache service using SharedPreferences.
+/// Works on Flutter Web, Android, iOS, and Desktop.
+/// Replaces the previous dart:io File-based approach which crashed on Web.
 class LocalCacheService {
-  Future<String> get _localPath async {
-    final directory = await getApplicationDocumentsDirectory();
-    return directory.path;
-  }
-
-  Future<File> _getLocalFile(String key) async {
-    final path = await _localPath;
-    return File('$path/$key.json');
-  }
-
+  
   /// Saves a list of maps to the local cache under the given key.
   Future<void> cacheListData(String key, List<Map<String, dynamic>> data) async {
     try {
-      final file = await _getLocalFile(key);
+      final prefs = await SharedPreferences.getInstance();
       final jsonString = jsonEncode(data);
-      await file.writeAsString(jsonString);
+      await prefs.setString(key, jsonString);
     } catch (e) {
-      print('Error caching data for key $key: $e');
+      // Log but don't rethrow — cache failure should never crash the app
+      print('LocalCacheService: Error caching data for key "$key": $e');
     }
   }
 
-  /// Retrieves a list of maps from the local cache. Returns null if not found.
+  /// Retrieves a list of maps from the local cache.
+  /// Returns null if the key is not found or data is corrupted.
   Future<List<Map<String, dynamic>>?> getCachedListData(String key) async {
     try {
-      final file = await _getLocalFile(key);
-      if (await file.exists()) {
-        final jsonString = await file.readAsString();
-        final List<dynamic> decodedList = jsonDecode(jsonString);
-        return decodedList.map((e) => e as Map<String, dynamic>).toList();
-      }
-      return null;
+      final prefs = await SharedPreferences.getInstance();
+      final jsonString = prefs.getString(key);
+      if (jsonString == null) return null;
+
+      final List<dynamic> decodedList = jsonDecode(jsonString);
+      return decodedList.map((e) => e as Map<String, dynamic>).toList();
     } catch (e) {
-      print('Error reading cached data for key $key: $e');
+      print('LocalCacheService: Error reading cached data for key "$key": $e');
       return null;
     }
   }
 
-  /// Clears the specific cache key.
+  /// Clears a specific cache key.
   Future<void> clearCache(String key) async {
     try {
-      final file = await _getLocalFile(key);
-      if (await file.exists()) {
-        await file.delete();
-      }
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove(key);
     } catch (e) {
-      print('Error clearing cache for key $key: $e');
+      print('LocalCacheService: Error clearing cache for key "$key": $e');
+    }
+  }
+
+  /// Clears all cached data managed by this service.
+  Future<void> clearAllCache() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.clear();
+    } catch (e) {
+      print('LocalCacheService: Error clearing all cache: $e');
     }
   }
 }

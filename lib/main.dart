@@ -16,9 +16,16 @@ void main() async {
   await dotenv.load(fileName: ".env");
 
   // Initialize Supabase
+  // Initialize Supabase with credentials from .env
+  final supabaseUrl = dotenv.env['VITE_SUPABASE_URL'] ?? '';
+  final supabaseKey = dotenv.env['VITE_SUPABASE_ANON_KEY'] ?? '';
+
+  assert(supabaseUrl.isNotEmpty, 'VITE_SUPABASE_URL is missing from .env');
+  assert(supabaseKey.isNotEmpty, 'VITE_SUPABASE_ANON_KEY is missing from .env');
+
   await Supabase.initialize(
-    url: dotenv.env['VITE_SUPABASE_URL'] ?? '',
-    anonKey: dotenv.env['VITE_SUPABASE_ANON_KEY'] ?? '',
+    url: supabaseUrl,
+    anonKey: supabaseKey,
   );
 
   await Firebase.initializeApp(

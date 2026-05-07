@@ -4,6 +4,7 @@ class Site {
   final String name; // Site Name
   final String partnerName;
   final String address;
+  final String hqAddress;
 
   Site({
     required this.id,
@@ -11,6 +12,7 @@ class Site {
     required this.name,
     required this.partnerName,
     required this.address,
+    this.hqAddress = '',
   });
 
   Map<String, dynamic> toMap() {
@@ -20,6 +22,7 @@ class Site {
       'name': name,
       'partner_name': partnerName,
       'address': address,
+      'partner_hq_address': hqAddress,
     };
   }
 
@@ -30,6 +33,7 @@ class Site {
       name: map['name'] ?? '',
       partnerName: map['partner_name'] ?? map['customerName'] ?? '',
       address: map['address'] ?? '',
+      hqAddress: map['partner_hq_address'] ?? '',
     );
   }
 }

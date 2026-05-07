@@ -28,7 +28,7 @@ class Asset {
   Map<String, dynamic> toMap() {
     return {
       'id': id,
-      'siteId': siteId,
+      'site_id': siteId,
       'name': name,
       'reference': reference,
       'model': model,
@@ -43,7 +43,7 @@ class Asset {
   factory Asset.fromMap(Map<String, dynamic> map) {
     return Asset(
       id: map['id'] ?? '',
-      siteId: map['siteId'] ?? '',
+      siteId: map['site_id'] ?? map['siteId'] ?? '',
       name: map['name'] ?? '',
       reference: map['reference'] ?? '',
       model: map['model'] ?? '',

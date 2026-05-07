@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
-import 'package:csv/csv.dart';
+// import 'package:csv/csv.dart'; // Temporarily disabled due to package-level conflict
 import 'package:printing/printing.dart';
 import 'package:intl/intl.dart';
 import '../models/site.dart';
@@ -20,8 +20,16 @@ import 'asset_detail_screen.dart';
 class AssetListScreen extends StatefulWidget {
   final Site site;
   final Company company;
+  final String? visitId;
+  final String? visitLabel;
 
-  const AssetListScreen({super.key, required this.site, required this.company});
+  const AssetListScreen({
+    super.key, 
+    required this.site, 
+    required this.company,
+    this.visitId,
+    this.visitLabel,
+  });
 
   @override
   State<AssetListScreen> createState() => _AssetListScreenState();
@@ -41,7 +49,12 @@ class _AssetListScreenState extends State<AssetListScreen> {
 
       if (result != null && result.files.single.bytes != null) {
         final content = utf8.decode(result.files.single.bytes!);
-        final rows = csv.decode(content);
+        // Robust manual CSV parsing to bypass library conflicts
+        final rows = content.split('\n')
+            .where((line) => line.trim().isNotEmpty)
+            .map((line) => line.split(RegExp(r'[,;]')))
+            .map((row) => row.map((cell) => cell.trim().replaceAll('"', '')).toList())
+            .toList();
 
         // Skip header row
         for (var i = 1; i < rows.length; i++) {
@@ -82,7 +95,8 @@ class _AssetListScreenState extends State<AssetListScreen> {
         rows.add([asset.name, asset.reference, asset.model, asset.type, asset.location]);
       }
 
-      String csvData = csv.encode(rows);
+      // Manual CSV encoding for export stability
+      String csvData = rows.map((row) => row.join(',')).join('\n');
       final bytes = utf8.encode(csvData);
       
       await Printing.sharePdf(
@@ -153,7 +167,7 @@ class _AssetListScreenState extends State<AssetListScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.site.name),
+        title: Text(widget.visitLabel ?? widget.site.name),
         backgroundColor: const Color(0xFF003366),
         foregroundColor: Colors.white,
         actions: [
@@ -218,15 +232,15 @@ class _AssetListScreenState extends State<AssetListScreen> {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(16),
-      color: const Color(0xFF003366).withOpacity(0.05),
+      color: const Color(0xFF003366).withValues(alpha: 0.05),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text('Partner: ${widget.site.partnerName}', style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF003366))),
           const SizedBox(height: 4),
-          Text('Site: Site Name: ${widget.site.name}'),
+          Text('Site: ${widget.site.name}'),
           const SizedBox(height: 4),
-          Text('Address: Address: ${widget.site.address}'),
+          Text('Address: ${widget.site.address}'),
         ],
       ),
     );
@@ -273,10 +287,19 @@ class _AssetListScreenState extends State<AssetListScreen> {
       child: Column(
         children: [
           ListTile(
-            title: Text('System: System Name: ${asset.name}', style: const TextStyle(fontWeight: FontWeight.bold)),
-            subtitle: Text('Ref: System Reference: ${asset.reference} | Loc: Asset Location: ${asset.location}'),
+            title: Text('System: ${asset.name}', style: const TextStyle(fontWeight: FontWeight.bold)),
+            subtitle: Text('Ref: ${asset.reference} | Loc: ${asset.location}'),
             trailing: const Icon(Icons.chevron_right),
-            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => InspectionFormScreen(asset: asset, site: widget.site))),
+            onTap: () => Navigator.push(
+              context, 
+              MaterialPageRoute(
+                builder: (context) => InspectionFormScreen(
+                  asset: asset, 
+                  site: widget.site,
+                  visitId: widget.visitId,
+                )
+              )
+            ),
           ),
           const Divider(height: 1),
           Padding(
@@ -287,6 +310,7 @@ class _AssetListScreenState extends State<AssetListScreen> {
                 children: [
                   _rowButton(Icons.edit, 'Edit', Colors.blue, () => _showEditAssetDialog(asset)),
                   _rowButton(Icons.delete, 'Delete', Colors.red, () => _confirmDelete(asset)),
+                  _rowButton(Icons.content_copy, 'Duplicate', Colors.teal, () => _duplicateAsset(asset)),
                   _rowButton(Icons.visibility, 'View', Colors.orange, () => Navigator.push(context, MaterialPageRoute(builder: (context) => AssetDetailScreen(asset: asset, site: widget.site, company: widget.company)))),
                   _rowButton(Icons.print, 'Print', Colors.indigo, () => _printSingle(asset)),
                   _rowButton(Icons.download, 'Download', Colors.green, () => _downloadSingle(asset)),
@@ -306,6 +330,28 @@ class _AssetListScreenState extends State<AssetListScreen> {
       label: Text(label, style: TextStyle(fontSize: 11, color: color)),
     );
   }
+  Future<void> _duplicateAsset(Asset asset) async {
+    final newAsset = Asset(
+      id: DateTime.now().millisecondsSinceEpoch.toString(),
+      siteId: asset.siteId,
+      name: '${asset.name} (Copy)',
+      reference: asset.reference,
+      model: asset.model,
+      type: asset.type,
+      location: asset.location,
+      rpm: asset.rpm,
+      hz: asset.hz,
+      powerKw: asset.powerKw,
+    );
+    
+    await _assetRepo.saveAsset(newAsset);
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Duplicated ${asset.name} successfully')),
+      );
+    }
+  }
+
   void _showAddAssetDialog() {
     final nameController = TextEditingController();
     final refController = TextEditingController();
@@ -314,6 +360,7 @@ class _AssetListScreenState extends State<AssetListScreen> {
     final locationController = TextEditingController();
     final rpmController = TextEditingController();
     final hzController = TextEditingController();
+    final kwController = TextEditingController();
     String frequency = '0.0';
 
     showDialog(
@@ -330,36 +377,48 @@ class _AssetListScreenState extends State<AssetListScreen> {
 
           return AlertDialog(
             title: const Text('Add New Asset / System'),
-            content: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  TextField(controller: nameController, decoration: const InputDecoration(labelText: 'Asset Name')),
-                  TextField(controller: refController, decoration: const InputDecoration(labelText: 'Reference')),
-                  TextField(controller: modelController, decoration: const InputDecoration(labelText: 'Model')),
-                  TextField(controller: typeController, decoration: const InputDecoration(labelText: 'Type')),
-                  TextField(controller: locationController, decoration: const InputDecoration(labelText: 'Location (e.g. L3)')),
-                  const Divider(),
-                  TextField(
-                    controller: rpmController,
-                    decoration: const InputDecoration(labelText: 'RPM'),
-                    keyboardType: TextInputType.number,
-                    onChanged: (_) => updateFreq(),
-                  ),
-                  TextField(
-                    controller: hzController,
-                    decoration: const InputDecoration(labelText: 'Hz'),
-                    keyboardType: TextInputType.number,
-                    onChanged: (_) => updateFreq(),
-                  ),
-                  const SizedBox(height: 8),
-                  Text('Frequency (RPM/Hz): $frequency', style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF003366))),
-                ],
+            content: SizedBox(
+              width: 450,
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    _buildTextField(nameController, 'Asset Name'),
+                    _buildTextField(refController, 'Reference'),
+                    _buildTextField(modelController, 'Model'),
+                    _buildTextField(typeController, 'Type'),
+                    _buildTextField(locationController, 'Location (e.g. L3)'),
+                    
+                    const SizedBox(height: 16),
+                    _buildSectionHeader(Icons.engineering, 'MOTOR / DRIVE PARAMETERS'),
+                    const SizedBox(height: 12),
+                    
+                    Row(
+                      children: [
+                        Expanded(child: _buildTextField(rpmController, 'RPM', suffix: 'rpm', isNumeric: true, onChanged: (_) => updateFreq())),
+                        const SizedBox(width: 12),
+                        Expanded(child: _buildTextField(hzController, 'Hz', suffix: 'Hz', isNumeric: true, onChanged: (_) => updateFreq())),
+                      ],
+                    ),
+                    
+                    _buildTextField(
+                      kwController, 
+                      'Power (kW)', 
+                      suffix: 'kW', 
+                      isNumeric: true, 
+                      isHighlighted: true,
+                    ),
+                    
+                    const SizedBox(height: 12),
+                    _buildFrequencyResult(frequency),
+                  ],
+                ),
               ),
             ),
             actions: [
               TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
               ElevatedButton(
+                style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFC0392B), foregroundColor: Colors.white),
                 onPressed: () async {
                   if (nameController.text.isNotEmpty) {
                     final asset = Asset(
@@ -372,6 +431,7 @@ class _AssetListScreenState extends State<AssetListScreen> {
                       location: locationController.text,
                       rpm: double.tryParse(rpmController.text) ?? 0.0,
                       hz: double.tryParse(hzController.text) ?? 0.0,
+                      powerKw: double.tryParse(kwController.text) ?? 0.0,
                     );
                     await _assetRepo.saveAsset(asset);
                     if (mounted) Navigator.pop(context);
@@ -385,6 +445,7 @@ class _AssetListScreenState extends State<AssetListScreen> {
       ),
     );
   }
+
   void _showEditAssetDialog(Asset asset) {
     final nameController = TextEditingController(text: asset.name);
     final refController = TextEditingController(text: asset.reference);
@@ -393,6 +454,9 @@ class _AssetListScreenState extends State<AssetListScreen> {
     final locationController = TextEditingController(text: asset.location);
     final rpmController = TextEditingController(text: asset.rpm.toString());
     final hzController = TextEditingController(text: asset.hz.toString());
+    final kwController = TextEditingController(
+      text: asset.powerKw > 0 ? asset.powerKw.toString() : '',
+    );
     String frequency = (asset.hz != 0) ? (asset.rpm / asset.hz).toStringAsFixed(2) : '0.0';
 
     showDialog(
@@ -409,36 +473,48 @@ class _AssetListScreenState extends State<AssetListScreen> {
 
           return AlertDialog(
             title: const Text('Edit Asset'),
-            content: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  TextField(controller: nameController, decoration: const InputDecoration(labelText: 'Asset Name')),
-                  TextField(controller: refController, decoration: const InputDecoration(labelText: 'Reference')),
-                  TextField(controller: modelController, decoration: const InputDecoration(labelText: 'Model')),
-                  TextField(controller: typeController, decoration: const InputDecoration(labelText: 'Type')),
-                  TextField(controller: locationController, decoration: const InputDecoration(labelText: 'Location')),
-                  const Divider(),
-                  TextField(
-                    controller: rpmController,
-                    decoration: const InputDecoration(labelText: 'RPM'),
-                    keyboardType: TextInputType.number,
-                    onChanged: (_) => updateFreq(),
-                  ),
-                  TextField(
-                    controller: hzController,
-                    decoration: const InputDecoration(labelText: 'Hz'),
-                    keyboardType: TextInputType.number,
-                    onChanged: (_) => updateFreq(),
-                  ),
-                  const SizedBox(height: 8),
-                  Text('Frequency (RPM/Hz): $frequency', style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF003366))),
-                ],
+            content: SizedBox(
+              width: 450,
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    _buildTextField(nameController, 'Asset Name'),
+                    _buildTextField(refController, 'Reference'),
+                    _buildTextField(modelController, 'Model'),
+                    _buildTextField(typeController, 'Type'),
+                    _buildTextField(locationController, 'Location'),
+                    
+                    const SizedBox(height: 16),
+                    _buildSectionHeader(Icons.engineering, 'MOTOR / DRIVE PARAMETERS'),
+                    const SizedBox(height: 12),
+                    
+                    Row(
+                      children: [
+                        Expanded(child: _buildTextField(rpmController, 'RPM', suffix: 'rpm', isNumeric: true, onChanged: (_) => updateFreq())),
+                        const SizedBox(width: 12),
+                        Expanded(child: _buildTextField(hzController, 'Hz', suffix: 'Hz', isNumeric: true, onChanged: (_) => updateFreq())),
+                      ],
+                    ),
+                    
+                    _buildTextField(
+                      kwController, 
+                      'Power (kW)', 
+                      suffix: 'kW', 
+                      isNumeric: true, 
+                      isHighlighted: true,
+                    ),
+                    
+                    const SizedBox(height: 12),
+                    _buildFrequencyResult(frequency),
+                  ],
+                ),
               ),
             ),
             actions: [
               TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
               ElevatedButton(
+                style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFC0392B), foregroundColor: Colors.white),
                 onPressed: () async {
                   final updatedAsset = Asset(
                     id: asset.id,
@@ -450,6 +526,7 @@ class _AssetListScreenState extends State<AssetListScreen> {
                     location: locationController.text,
                     rpm: double.tryParse(rpmController.text) ?? 0.0,
                     hz: double.tryParse(hzController.text) ?? 0.0,
+                    powerKw: double.tryParse(kwController.text) ?? 0.0,
                   );
                   await _assetRepo.saveAsset(updatedAsset);
                   if (mounted) Navigator.pop(context);
@@ -462,6 +539,88 @@ class _AssetListScreenState extends State<AssetListScreen> {
       ),
     );
   }
+
+  // --- Premium UI Helpers ---
+
+  Widget _buildTextField(
+    TextEditingController controller, 
+    String label, {
+    String? suffix, 
+    bool isNumeric = false, 
+    bool isHighlighted = false,
+    Function(String)? onChanged,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12.0),
+      child: TextField(
+        controller: controller,
+        onChanged: onChanged,
+        keyboardType: isNumeric ? const TextInputType.numberWithOptions(decimal: true) : TextInputType.text,
+        decoration: InputDecoration(
+          labelText: label,
+          suffixText: suffix,
+          filled: isHighlighted,
+          fillColor: isHighlighted ? const Color(0xFFE8F0FE) : Colors.transparent,
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(8),
+            borderSide: BorderSide(color: isHighlighted ? const Color(0xFF1565C0) : Colors.grey[300]!),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(8),
+            borderSide: BorderSide(color: isHighlighted ? const Color(0xFF0D47A1) : const Color(0xFF003366), width: 2),
+          ),
+          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSectionHeader(IconData icon, String title) {
+    return Row(
+      children: [
+        Icon(icon, size: 18, color: const Color(0xFF003366)),
+        const SizedBox(width: 8),
+        Text(
+          title,
+          style: const TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.bold,
+            color: Color(0xFF003366),
+            letterSpacing: 1.1,
+          ),
+        ),
+        const SizedBox(width: 8),
+        const Expanded(child: Divider()),
+      ],
+    );
+  }
+
+  Widget _buildFrequencyResult(String frequency) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+      decoration: BoxDecoration(
+        color: const Color(0xFFE8EDF2),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Icon(Icons.bolt, size: 18, color: Colors.orange),
+          const SizedBox(width: 8),
+          Text(
+            'Frequency (RPM / Hz): $frequency',
+            style: const TextStyle(
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF003366),
+              fontSize: 14,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
 
   Future<void> _printSingle(Asset asset) async {
     final inspection = await _inspectionRepo.getLatestInspection(asset.id);
