@@ -19,6 +19,9 @@ class KnowledgeBaseScreen extends StatelessWidget {
           children: [
             _buildHeroSection(),
             const SizedBox(height: 24),
+            _buildSectionTitle('0. App Operational Guide (Facility Manual)'),
+            _buildAppGuideSection(),
+            const SizedBox(height: 24),
             _buildSectionTitle('1. Understanding Acceleration (g)'),
             _buildContentCard(
               'What can g-value predict?',
@@ -79,6 +82,33 @@ class KnowledgeBaseScreen extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildAppGuideSection() {
+    return Column(
+      children: [
+        _buildContentCard(
+          'Rapid Job Duplication',
+          'Save 80% time by cloning previous inspections. Go to "Maintenance History", find a previous visit, and click the "Duplicate" icon. The app will create a new copy with the same asset list, ready for current data entry.'
+        ),
+        _buildContentCard(
+          'Quad-Mode AI Diagnostic Suite',
+          'Use the "AI Industrial Scan" in any inspection form:\n'
+          '• VISUAL: Scans for Rust, Leaks, and Loose Bolts.\n'
+          '• THERMAL: Scans bearings for hotspots and friction.\n'
+          '• GRAPH: Extracts g-values from WitMotion screenshots.\n'
+          '• ELECTRICAL: Detects Ampere Surges and Sludge-induced load.'
+        ),
+        _buildContentCard(
+          'ISO 10816 Compliance',
+          'The app features a Live Converter. Type your "g" reading, and the app automatically calculates "mm/s" using the standard 31.2x multiplier for 50Hz motors.'
+        ),
+        _buildContentCard(
+          'Professional Site Reporting',
+          'Use the "Continuous Print" button in Visit Details to generate a full site certificate including the professional CelRon Cover Page and all inspected assets.'
+        ),
+      ],
     );
   }
 
