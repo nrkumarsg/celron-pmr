@@ -37,33 +37,40 @@ class _InspectionFormScreenState extends State<InspectionFormScreen> {
   XFile? _vibrationImg;
   XFile? _tempImg;
 
-
-
   late Map<String, dynamic> _motorParams;
   late Map<String, dynamic> _pumpParams;
   late Map<String, dynamic> _pipeParams;
+  
+  String _overallStatus = 'NORMAL';
+  String _bearingStatus = 'NORMAL';
+  String _velocityStatus = 'NORMAL';
+  String _maintenanceAdvice = 'Machine healthy.';
 
   late TextEditingController _projectRefController;
+
   late TextEditingController _partnerRefController;
+  late TextEditingController _velocityController;
   final _inspectionByController = TextEditingController(text: 'Service Engineer');
   final _quarterlyCycleController = TextEditingController(text: 'Q1-2025');
-
-  @override
-  void dispose() {
-    _projectRefController.dispose();
-    _partnerRefController.dispose();
-    _inspectionByController.dispose();
-    _quarterlyCycleController.dispose();
-    super.dispose();
-  }
 
   @override
   void initState() {
     super.initState();
     _projectRefController = TextEditingController(text: widget.visit?.celronRef ?? 'PRJ-2025-001');
     _partnerRefController = TextEditingController(text: widget.visit?.customerRef ?? 'PART-REF-001');
+    _velocityController = TextEditingController(text: _velocityMms.toString());
     _initializeDefaults();
     _updateStatus();
+  }
+
+  @override
+  void dispose() {
+    _projectRefController.dispose();
+    _partnerRefController.dispose();
+    _velocityController.dispose();
+    _inspectionByController.dispose();
+    _quarterlyCycleController.dispose();
+    super.dispose();
   }
 
   void _initializeDefaults() {
@@ -104,10 +111,10 @@ class _InspectionFormScreenState extends State<InspectionFormScreen> {
     };
   }
 
-  String _overallStatus = 'NORMAL';
-  String _bearingStatus = 'NORMAL';
-  String _velocityStatus = 'NORMAL';
-  String _maintenanceAdvice = 'Machine healthy.';
+  void _updateVelocityFromG() {
+    _velocityMms = double.parse((_vibrationG * 31.2).toStringAsFixed(2));
+    _velocityController.text = _velocityMms.toString();
+  }
 
   void _updateStatus() {
     final statusMap = HealthLogic.getDualStatus(_vibrationG, _velocityMms, widget.asset.powerKw);
@@ -505,6 +512,7 @@ class _InspectionFormScreenState extends State<InspectionFormScreen> {
                     keyboardType: TextInputType.number,
                     onChanged: (val) {
                       _vibrationG = double.tryParse(val) ?? 0;
+                      _updateVelocityFromG();
                       _updateStatus();
                     },
                   ),
@@ -512,7 +520,7 @@ class _InspectionFormScreenState extends State<InspectionFormScreen> {
                 const SizedBox(width: 16),
                 Expanded(
                   child: TextFormField(
-                    initialValue: _velocityMms.toString(),
+                    controller: _velocityController,
                     decoration: const InputDecoration(
                       labelText: 'ISO Velocity (mm/s)',
                       border: OutlineInputBorder(),
@@ -520,7 +528,10 @@ class _InspectionFormScreenState extends State<InspectionFormScreen> {
                       filled: true,
                     ),
                     keyboardType: TextInputType.number,
-                    onChanged: (val) => _velocityMms = double.tryParse(val) ?? 0,
+                    onChanged: (val) {
+                      _velocityMms = double.tryParse(val) ?? 0;
+                      _updateStatus();
+                    },
                   ),
                 ),
               ],
