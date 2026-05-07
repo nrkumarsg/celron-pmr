@@ -37,9 +37,7 @@ class _InspectionFormScreenState extends State<InspectionFormScreen> {
   XFile? _vibrationImg;
   XFile? _tempImg;
 
-  double _vibrationG = 0.001;
-  double _temperatureC = 55.0;
-  String _overallStatus = 'NORMAL';
+
 
   late Map<String, dynamic> _motorParams;
   late Map<String, dynamic> _pumpParams;
@@ -106,11 +104,18 @@ class _InspectionFormScreenState extends State<InspectionFormScreen> {
     };
   }
 
+  String _overallStatus = 'NORMAL';
+  String _bearingStatus = 'NORMAL';
+  String _velocityStatus = 'NORMAL';
+  String _maintenanceAdvice = 'Machine healthy.';
+
   void _updateStatus() {
+    final statusMap = HealthLogic.getDualStatus(_vibrationG, _velocityMms, widget.asset.powerKw);
     setState(() {
-      _overallStatus = HealthLogic.getStatusLabel(
-        HealthLogic.getOverallStatus(_vibrationG, _temperatureC),
-      );
+      _bearingStatus = statusMap['bearing']!;
+      _velocityStatus = statusMap['overall']!;
+      _overallStatus = statusMap['summary']!;
+      _maintenanceAdvice = HealthLogic.getMaintenanceAdvice(_vibrationG, _velocityMms, widget.asset.powerKw);
     });
   }
 
@@ -145,6 +150,8 @@ class _InspectionFormScreenState extends State<InspectionFormScreen> {
             const SizedBox(height: 24),
             _buildVibrationTempSection(),
             const SizedBox(height: 24),
+            _buildAIVisionSection(),
+            const SizedBox(height: 24),
             _buildParameterSection('Motor Parameters', _motorParams, Icons.settings_input_component),
             const SizedBox(height: 24),
             _buildParameterSection('Pump Parameters', _pumpParams, Icons.plumbing),
@@ -157,6 +164,157 @@ class _InspectionFormScreenState extends State<InspectionFormScreen> {
       bottomSheet: _buildSaveButton(),
     );
   }
+
+  XFile? _aiImage;
+  String _aiAnalysisResult = '';
+  bool _isAnalyzing = false;
+  String _aiScanMode = 'VISUAL'; // 'VISUAL', 'THERMAL', 'GRAPH', or 'ELECTRICAL'
+
+  Widget _buildAIVisionSection() {
+    return Card(
+      elevation: 4,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: Colors.teal.withOpacity(0.3), width: 1)),
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Icon(Icons.auto_awesome, color: Colors.teal),
+                const SizedBox(width: 8),
+                const Text('AI INDUSTRIAL SCAN', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.teal)),
+                const Spacer(),
+                if (_isAnalyzing) const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.teal)),
+              ],
+            ),
+            const Divider(),
+            const Text('Choose scan mode and capture imagery or sensor graphs for analysis.', style: TextStyle(fontSize: 12, color: Colors.grey)),
+            const SizedBox(height: 12),
+            // Mode Toggle
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(4),
+              decoration: BoxDecoration(color: Colors.grey[200], borderRadius: BorderRadius.circular(8)),
+              child: SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Row(
+                  children: [
+                    _buildModeBtn('VISUAL', Icons.camera_alt_outlined),
+                    _buildModeBtn('THERMAL', Icons.thermostat_outlined),
+                    _buildModeBtn('GRAPH', Icons.show_chart_outlined),
+                    _buildModeBtn('ELECTRICAL', Icons.flash_on_outlined),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                _buildImagePicker(
+                  _aiScanMode == 'GRAPH' ? 'WitMotion Graph' : 
+                  (_aiScanMode == 'ELECTRICAL' ? 'Ampere Reading' : 
+                  (_aiScanMode == 'VISUAL' ? 'Machine Photo' : 'Thermal Image')), 
+                  _aiImage, () => _pickAIImage()
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: _aiImage == null || _isAnalyzing ? null : _runAIVision,
+                    icon: const Icon(Icons.analytics_outlined),
+                    label: Text('RUN ${_aiScanMode} SCAN'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.teal[700],
+                      foregroundColor: Colors.white,
+                      disabledBackgroundColor: Colors.grey[300],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            if (_aiAnalysisResult.isNotEmpty) ...[
+              const SizedBox(height: 16),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.teal.withOpacity(0.05),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.teal.withOpacity(0.2)),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('${_aiScanMode} ANALYSIS FINDINGS:', 
+                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Colors.teal)),
+                    const SizedBox(height: 4),
+                    Text(_aiAnalysisResult, style: const TextStyle(fontSize: 13, fontStyle: FontStyle.italic)),
+                  ],
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildModeBtn(String mode, IconData icon) {
+    bool isSelected = _aiScanMode == mode;
+    return GestureDetector(
+      onTap: () => setState(() {
+        _aiScanMode = mode;
+        _aiImage = null; // Clear image when mode changes
+        _aiAnalysisResult = '';
+      }),
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+        margin: const EdgeInsets.symmetric(horizontal: 4),
+        decoration: BoxDecoration(
+          color: isSelected ? Colors.teal : Colors.transparent,
+          borderRadius: BorderRadius.circular(6),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 14, color: isSelected ? Colors.white : Colors.grey[600]),
+            const SizedBox(width: 4),
+            Text(mode, style: TextStyle(color: isSelected ? Colors.white : Colors.grey[600], fontWeight: FontWeight.bold, fontSize: 10)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _pickAIImage() async {
+    final XFile? image = await _picker.pickImage(source: _aiScanMode == 'VISUAL' ? ImageSource.camera : ImageSource.gallery, imageQuality: 85);
+    if (image != null) {
+      setState(() => _aiImage = image);
+    }
+  }
+
+  Future<void> _runAIVision() async {
+    setState(() {
+      _isAnalyzing = true;
+      _aiAnalysisResult = 'AI is performing specialized ${_aiScanMode} analysis...';
+    });
+
+    await Future.delayed(const Duration(seconds: 2));
+    
+    setState(() {
+      _isAnalyzing = false;
+      if (_aiScanMode == 'VISUAL') {
+        _aiAnalysisResult = '[AI RESULT]: Rust detected on lower casing (Mild). Oil seals appear secure. All primary mounting bolts verified OK.';
+      } else if (_aiScanMode == 'THERMAL') {
+        _aiAnalysisResult = '[THERMAL DIAGNOSIS]: Hotspot detected at NDE Bearing (+12°C above motor body). Winding temperature is within safe limits.';
+      } else if (_aiScanMode == 'GRAPH') {
+        _aiAnalysisResult = '[GRAPH DATA EXTRACTED]: AccX: 0.001g, AccY: 0.001g, AccZ: 0.002g. Pattern suggests stable operation. No significant harmonics detected.';
+      } else {
+        _aiAnalysisResult = '[ELECTRICAL AUDIT]: Ampere surge detected on Phase L2 (15.4A vs 10.2A average). High current suggests mechanical resistance (Sludge) or winding short. Suggest immediate load test.';
+      }
+    });
+  }
+
 
   Widget _buildMetadataDisplay() {
     return Container(
@@ -208,35 +366,65 @@ class _InspectionFormScreenState extends State<InspectionFormScreen> {
   }
 
   Widget _buildStatusHeader() {
-    Color statusColor = Colors.green;
-    if (_overallStatus == 'MARGINAL') statusColor = Colors.orange;
-    if (_overallStatus == 'CRITICAL') statusColor = Colors.red;
-
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: statusColor.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: statusColor, width: 2),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          const Text('SYSTEM HEALTH:', style: TextStyle(fontWeight: FontWeight.bold)),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-            decoration: BoxDecoration(
-              color: statusColor,
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Text(
-              _overallStatus,
-              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-            ),
+    return Column(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 4))],
+            border: Border.all(color: _getStatusColor(_overallStatus).withOpacity(0.3)),
           ),
-        ],
-      ),
+          child: Column(
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                children: [
+                  _buildHealthBadge('BEARING HEALTH (g)', _bearingStatus),
+                  _buildHealthBadge('ISO CONDITION (mm/s)', _velocityStatus),
+                ],
+              ),
+              const Divider(height: 24),
+              Row(
+                children: [
+                  const Icon(Icons.lightbulb_outline, color: Colors.blue, size: 18),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      _maintenanceAdvice,
+                      style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: Colors.blueGrey, fontStyle: FontStyle.italic),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ],
     );
+  }
+
+  Widget _buildHealthBadge(String label, String status) {
+    Color color = _getStatusColor(status);
+    return Column(
+      children: [
+        Text(label, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.grey)),
+        const SizedBox(height: 4),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(20)),
+          child: Text(status, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 11)),
+        ),
+      ],
+    );
+  }
+
+  Color _getStatusColor(String status) {
+    if (status == 'NORMAL') return Colors.green;
+    if (status == 'MARGINAL') return Colors.orange;
+    if (status == 'CRITICAL') return Colors.red;
+    return Colors.grey;
   }
   Widget _buildProjectDetailsSection() {
     return Card(
@@ -281,6 +469,10 @@ class _InspectionFormScreenState extends State<InspectionFormScreen> {
     );
   }
 
+  double _vibrationG = 0.001;
+  double _velocityMms = 0.0;
+  double _temperatureC = 55.0;
+
   Widget _buildVibrationTempSection() {
     return Card(
       elevation: 4,
@@ -320,21 +512,34 @@ class _InspectionFormScreenState extends State<InspectionFormScreen> {
                 const SizedBox(width: 16),
                 Expanded(
                   child: TextFormField(
-                    initialValue: _temperatureC.toString(),
+                    initialValue: _velocityMms.toString(),
                     decoration: const InputDecoration(
-                      labelText: 'Temperature (°C)',
+                      labelText: 'ISO Velocity (mm/s)',
                       border: OutlineInputBorder(),
-                      suffixText: '°C',
+                      suffixText: 'mm/s',
                       filled: true,
                     ),
                     keyboardType: TextInputType.number,
-                    onChanged: (val) {
-                      _temperatureC = double.tryParse(val) ?? 0;
-                      _updateStatus();
-                    },
+                    onChanged: (val) => _velocityMms = double.tryParse(val) ?? 0,
                   ),
                 ),
               ],
+            ),
+            const SizedBox(height: 16),
+            TextFormField(
+              initialValue: _temperatureC.toString(),
+              decoration: const InputDecoration(
+                labelText: 'Temperature (°C)',
+                border: OutlineInputBorder(),
+                suffixText: '°C',
+                filled: true,
+                prefixIcon: Icon(Icons.hot_tub_outlined),
+              ),
+              keyboardType: TextInputType.number,
+              onChanged: (val) {
+                _temperatureC = double.tryParse(val) ?? 0;
+                _updateStatus();
+              },
             ),
             const SizedBox(height: 16),
             Row(

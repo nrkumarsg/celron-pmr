@@ -113,6 +113,35 @@ class _VisitListScreenState extends State<VisitListScreen> {
               style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Color(0xFF003366)),
             ),
             const Spacer(),
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                IconButton(
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                  icon: const Icon(Icons.copy, color: Colors.teal, size: 18),
+                  tooltip: 'Duplicate Job',
+                  onPressed: () => _duplicateVisit(visit),
+                ),
+                const SizedBox(width: 8),
+                IconButton(
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                  icon: const Icon(Icons.edit, color: Colors.blue, size: 18),
+                  tooltip: 'Edit Job',
+                  onPressed: () => _showAddVisitDialog(visit: visit),
+                ),
+                const SizedBox(width: 8),
+                IconButton(
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                  icon: const Icon(Icons.delete_outline, color: Colors.red, size: 18),
+                  tooltip: 'Delete Job',
+                  onPressed: () => _showDeleteVisitDialog(visit),
+                ),
+              ],
+            ),
+            const SizedBox(width: 12),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               decoration: BoxDecoration(
@@ -190,19 +219,19 @@ class _VisitListScreenState extends State<VisitListScreen> {
     }
   }
 
-  void _showAddVisitDialog() {
-    final celronRefController = TextEditingController(text: 'CRN-PM-${DateFormat('yyyyMMdd').format(DateTime.now())}');
-    final customerRefController = TextEditingController();
-    final notesController = TextEditingController();
-    DateTime selectedDate = DateTime.now();
-    String selectedJobType = 'AD_HOC';
-    DateTime? contractEndsDate;
+  void _showAddVisitDialog({ServiceVisit? visit}) {
+    final celronRefController = TextEditingController(text: visit?.celronRef ?? 'CRN-PM-${DateFormat('yyyyMMdd').format(DateTime.now())}');
+    final customerRefController = TextEditingController(text: visit?.customerRef ?? '');
+    final notesController = TextEditingController(text: visit?.notes ?? '');
+    DateTime selectedDate = visit?.visitDate ?? DateTime.now();
+    String selectedJobType = visit?.jobType ?? 'AD_HOC';
+    DateTime? contractEndsDate = visit?.contractEnds;
 
     showDialog(
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setState) => AlertDialog(
-          title: const Text('New Maintenance Visit'),
+          title: Text(visit == null ? 'New Maintenance Visit' : 'Edit Maintenance Visit'),
           content: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -281,8 +310,8 @@ class _VisitListScreenState extends State<VisitListScreen> {
               style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF003366), foregroundColor: Colors.white),
               onPressed: () async {
                 if (celronRefController.text.isNotEmpty) {
-                  final visit = ServiceVisit(
-                    id: DateTime.now().millisecondsSinceEpoch.toString(),
+                  final newVisit = ServiceVisit(
+                    id: visit?.id ?? DateTime.now().millisecondsSinceEpoch.toString(),
                     siteId: widget.site.id,
                     celronRef: celronRefController.text,
                     customerRef: customerRefController.text,
@@ -290,13 +319,14 @@ class _VisitListScreenState extends State<VisitListScreen> {
                     notes: notesController.text,
                     jobType: selectedJobType,
                     contractEnds: contractEndsDate,
-                    createdAt: DateTime.now(),
+                    createdAt: visit?.createdAt ?? DateTime.now(),
+                    status: visit?.status ?? 'OPEN',
                   );
-                  await _visitRepo.saveVisit(visit);
+                  await _visitRepo.saveVisit(newVisit);
                   if (mounted) Navigator.pop(context);
                 }
               },
-              child: const Text('Create Job'),
+              child: Text(visit == null ? 'Create Job' : 'Save Changes'),
             ),
           ],
         ),
@@ -304,7 +334,52 @@ class _VisitListScreenState extends State<VisitListScreen> {
     );
   }
 
+  void _showDeleteVisitDialog(ServiceVisit visit) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Job?'),
+        content: Text('Are you sure you want to delete "${visit.celronRef}"? This action cannot be undone.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red, foregroundColor: Colors.white),
+            onPressed: () async {
+              await _visitRepo.deleteVisit(visit.id);
+              if (mounted) Navigator.pop(context);
+            },
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _duplicateVisit(ServiceVisit visit) async {
+    final newRef = '${visit.celronRef}-COPY';
+    final newVisit = ServiceVisit(
+      id: DateTime.now().millisecondsSinceEpoch.toString(),
+      siteId: visit.siteId,
+      celronRef: newRef,
+      customerRef: visit.customerRef,
+      visitDate: DateTime.now(),
+      notes: visit.notes,
+      jobType: visit.jobType,
+      contractEnds: visit.contractEnds,
+      createdAt: DateTime.now(),
+      status: 'OPEN',
+    );
+
+    await _visitRepo.saveVisit(newVisit);
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Job Duplicated: $newRef')),
+      );
+    }
+  }
+
   Widget _buildDialogField(TextEditingController controller, String label, IconData icon) {
+
     return Padding(
       padding: const EdgeInsets.only(bottom: 16.0),
       child: TextField(

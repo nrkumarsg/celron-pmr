@@ -7,6 +7,9 @@ import '../models/asset.dart';
 import '../models/inspection.dart';
 import '../domain/repositories/asset_repository.dart';
 import '../domain/repositories/inspection_repository.dart';
+import '../domain/repositories/service_visit_repository.dart';
+import 'package:printing/printing.dart';
+import '../services/pdf_service.dart';
 import '../injection_container.dart';
 import 'asset_list_screen.dart';
 import 'inspection_form_screen.dart';
@@ -117,27 +120,222 @@ class _VisitDetailScreenState extends State<VisitDetailScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('Partner: ${widget.site.partnerName}', style: const TextStyle(fontWeight: FontWeight.bold)),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                decoration: BoxDecoration(
-                  color: widget.visit.jobType == 'CONTRACT' ? Colors.blue[800] : Colors.orange[800],
-                  borderRadius: BorderRadius.circular(4),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Partner: ${widget.site.partnerName}', style: const TextStyle(fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 4),
+                    Text('PO Ref: ${widget.visit.customerRef}', style: const TextStyle(fontSize: 13, color: Colors.blueGrey)),
+                  ],
                 ),
-                child: Text(widget.visit.jobType, style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
+              ),
+              Row(
+                children: [
+                  IconButton(
+                    tooltip: 'Duplicate Job',
+                    icon: const Icon(Icons.copy, color: Colors.teal, size: 20),
+                    onPressed: () => _duplicateJob(),
+                  ),
+                  IconButton(
+                    tooltip: 'Edit Job',
+                    icon: const Icon(Icons.edit, color: Colors.blue, size: 20),
+                    onPressed: () => _editJob(),
+                  ),
+                  IconButton(
+                    tooltip: 'Delete Job',
+                    icon: const Icon(Icons.delete_outline, color: Colors.red, size: 20),
+                    onPressed: () => _deleteJob(),
+                  ),
+                  const SizedBox(width: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: widget.visit.jobType == 'CONTRACT' ? Colors.blue[800] : Colors.orange[800],
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: Text(widget.visit.jobType, style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
+                  ),
+                ],
               ),
             ],
           ),
-          const SizedBox(height: 4),
-          Text('PO Ref: ${widget.visit.customerRef}', style: const TextStyle(fontSize: 13, color: Colors.blueGrey)),
-          if (widget.visit.notes.isNotEmpty) ...[
-            const SizedBox(height: 8),
-            Text(widget.visit.notes, style: const TextStyle(fontSize: 12, fontStyle: FontStyle.italic)),
-          ],
+          Row(
+            children: [
+              Expanded(
+                child: ElevatedButton.icon(
+                  onPressed: () => _generateContinuousPdf(),
+                  icon: const Icon(Icons.print_outlined),
+                  label: const Text('Continuous Print'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF003366),
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: ElevatedButton.icon(
+                  onPressed: () => _generateVisitReport(),
+                  icon: const Icon(Icons.description_outlined),
+                  label: const Text('Visit Report'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.green[800],
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+                  ),
+                ),
+              ),
+            ],
+          ),
         ],
       ),
     );
   }
+
+  void _generateContinuousPdf() async {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Preparing Merged Inspection Reports...')),
+    );
+
+    try {
+      final assets = await _assetRepo.getAssets(widget.site.id);
+      final inspections = await _inspectionRepo.getAllInspectionsForSite(widget.site.id);
+      final visitInspections = inspections.where((i) => i.visitId == widget.visit.id).toList();
+
+      final List<Map<String, dynamic>> assetData = [];
+      for (var asset in assets) {
+        final insp = visitInspections.firstWhere(
+          (i) => i.assetId == asset.id,
+          orElse: () => Inspection(
+            id: 'PENDING', assetId: asset.id, date: DateTime.now(),
+            projectRef: '', partnerRef: '', inspectionBy: '',
+            quarterlyCycle: '', vibrationG: 0, temperatureC: 0,
+            motorParameters: {}, pumpParameters: {}, pipeParameters: {},
+            otherParameters: {}, overallStatus: 'PENDING'
+          ),
+        );
+        if (insp.id != 'PENDING') {
+          assetData.add({'asset': asset, 'inspection': insp});
+        }
+      }
+
+      if (assetData.isEmpty) {
+        if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('No inspections completed for this visit.')));
+        return;
+      }
+
+      final pdfBytes = await PdfService.generateMergedInspectionPdf(
+        company: widget.company,
+        site: widget.site,
+        assetData: assetData,
+      );
+
+      await Printing.layoutPdf(
+        onLayout: (format) => pdfBytes,
+        name: 'Continuous_Report_${widget.visit.celronRef}.pdf',
+      );
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error generating PDF: $e')));
+    }
+  }
+
+  void _generateVisitReport() async {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Preparing Visit Summary Report...')),
+    );
+
+    try {
+      final assets = await _assetRepo.getAssets(widget.site.id);
+      final inspections = await _inspectionRepo.getAllInspectionsForSite(widget.site.id);
+      final visitInspections = inspections.where((i) => i.visitId == widget.visit.id).toList();
+
+      final List<Map<String, dynamic>> assetData = [];
+      for (var asset in assets) {
+        final insp = visitInspections.firstWhere(
+          (i) => i.assetId == asset.id,
+          orElse: () => Inspection(
+            id: 'PENDING', assetId: asset.id, date: DateTime.now(),
+            projectRef: '', partnerRef: '', inspectionBy: '',
+            quarterlyCycle: '', vibrationG: 0, temperatureC: 0,
+            motorParameters: {}, pumpParameters: {}, pipeParameters: {},
+            otherParameters: {}, overallStatus: 'PENDING'
+          ),
+        );
+        assetData.add({'asset': asset, 'inspection': insp});
+      }
+
+      final pdfBytes = await PdfService.generateVisitReport(
+        company: widget.company,
+        site: widget.site,
+        assetData: assetData,
+        ourRef: widget.visit.celronRef,
+        jobDescription: widget.visit.notes.isEmpty ? 'Quarterly Maintenance Inspection' : widget.visit.notes,
+      );
+
+      await Printing.layoutPdf(
+        onLayout: (format) => pdfBytes,
+        name: 'Visit_Report_${widget.visit.celronRef}.pdf',
+      );
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error generating Visit Report: $e')));
+    }
+  }
+
+  void _editJob() {
+    // This will be handled by navigating back or showing a dialog
+    // For now, we'll implement a local edit dialog similar to VisitListScreen
+  }
+
+  void _deleteJob() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Job?'),
+        content: Text('Delete "${widget.visit.celronRef}"? This will remove all linked data.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red, foregroundColor: Colors.white),
+            onPressed: () async {
+              await sl<ServiceVisitRepository>().deleteVisit(widget.visit.id);
+              if (mounted) {
+                Navigator.pop(context); // Close dialog
+                Navigator.pop(context); // Go back to list
+              }
+            },
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _duplicateJob() async {
+    final newRef = '${widget.visit.celronRef}-COPY';
+    final newVisit = ServiceVisit(
+      id: DateTime.now().millisecondsSinceEpoch.toString(),
+      siteId: widget.visit.siteId,
+      celronRef: newRef,
+      customerRef: widget.visit.customerRef,
+      visitDate: DateTime.now(),
+      notes: widget.visit.notes,
+      jobType: widget.visit.jobType,
+      contractEnds: widget.visit.contractEnds,
+      createdAt: DateTime.now(),
+      status: 'OPEN',
+    );
+
+    await sl<ServiceVisitRepository>().saveVisit(newVisit);
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Job Duplicated: $newRef')),
+      );
+      Navigator.pop(context); // Go back to list to see the new job
+    }
+  }
+
 
   Widget _buildAssetStatusCard(Asset asset, Inspection inspection, bool isInspected) {
     return Card(

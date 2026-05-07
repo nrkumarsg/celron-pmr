@@ -1,27 +1,13 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <!--
-    If you are serving your web app in a path other than the root, change the
-    href value below to reflect the base path you are serving from.
-
-    The path provided below has to start and end with a slash "/" in order for
-    it to work correctly.
-
-    For more details:
-    * https://developer.mozilla.org/en-US/docs/Web/HTML/Element/base
-
-    This is a placeholder for base href that will be replaced by the value of
-    the `--base-href` argument provided to `flutter build`.
-  -->
   <base href="$FLUTTER_BASE_HREF">
-
   <meta charset="UTF-8">
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
-  <meta name="description" content="CEL-RON Condition Monitoring Application">
+  <meta name="description" content="CEL-RON Preventive Maintenance Report System">
 
   <!-- iOS meta tags & icons -->
-  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
   <meta name="apple-mobile-web-app-title" content="CEL-RON PMR">
   <link rel="apple-touch-icon" href="icons/Icon-192.png">
@@ -31,6 +17,7 @@
 
   <title>CEL-RON PMR</title>
   <link rel="manifest" href="manifest.json">
+
   <style>
     body {
       background-color: #f5f7fa;
@@ -41,8 +28,19 @@
       height: 100vh;
       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     }
-    .loading-container {
-      text-align: center;
+    #loading-indicator {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: #f5f7fa;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      z-index: 9999;
+      transition: opacity 0.5s ease-out;
     }
     .logo-text {
       font-size: 28px;
@@ -57,8 +55,6 @@
       border: 5px solid #003366;
       border-bottom-color: transparent;
       border-radius: 50%;
-      display: inline-block;
-      box-sizing: border-box;
       animation: rotation 1s linear infinite;
     }
     @keyframes rotation {
@@ -71,33 +67,34 @@
       font-size: 14px;
     }
   </style>
-  <script src="flutter.js" defer></script>
 </head>
 <body>
-  <div id="loading-indicator" class="loading-container">
+  <div id="loading-indicator">
     <div class="logo-text">CEL-RON PMR</div>
     <div class="loader"></div>
     <div class="loading-text">Initializing Industrial Systems...</div>
   </div>
 
+  <script src="flutter_bootstrap.js" async></script>
+
   <script>
-    window.addEventListener('load', function(ev) {
-      // Wait for flutter.js to be ready
-      _flutter.loader.loadEntrypoint({
-        serviceWorker: {
-          serviceWorkerVersion: "{{flutter_service_worker_version}}",
-        },
-        onEntrypointLoaded: function(engineInitializer) {
-          engineInitializer.initializeEngine().then(function(appRunner) {
-            appRunner.runApp();
-            // Hide the loader once the app is running
-            setTimeout(function() {
-              document.getElementById('loading-indicator').style.display = 'none';
-            }, 500);
-          });
-        }
-      });
+    // Fail-safe to hide loader if app takes too long or initializes silently
+    window.addEventListener('flutter-first-frame', function() {
+      var loader = document.getElementById('loading-indicator');
+      if (loader) {
+        loader.style.opacity = '0';
+        setTimeout(function() { loader.style.display = 'none'; }, 500);
+      }
     });
+    
+    // Backup: Hide loader after a reasonable timeout if the event doesn't fire
+    setTimeout(function() {
+      var loader = document.getElementById('loading-indicator');
+      if (loader && loader.style.display !== 'none') {
+        loader.style.opacity = '0';
+        setTimeout(function() { loader.style.display = 'none'; }, 500);
+      }
+    }, 10000);
   </script>
 </body>
 </html>

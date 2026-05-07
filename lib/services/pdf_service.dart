@@ -71,6 +71,16 @@ class PdfService {
     final pdf = pw.Document();
     final logoImage = await _loadLogo();
 
+    // 1. Add Cover Page
+    pdf.addPage(
+      pw.Page(
+        pageFormat: PdfPageFormat.a4,
+        margin: const pw.EdgeInsets.all(32),
+        build: (pw.Context context) => _buildCoverPage(company, site, logoImage),
+      ),
+    );
+
+    // 2. Add Continuous Inspection Pages
     for (var data in assetData) {
       final asset = data['asset'] as Asset;
       final inspection = data['inspection'] as Inspection;
@@ -97,6 +107,46 @@ class PdfService {
       );
     }
     return pdf.save();
+  }
+
+  static pw.Widget _buildCoverPage(Company company, Site site, pw.ImageProvider? logoImage) {
+    return pw.Column(
+      crossAxisAlignment: pw.CrossAxisAlignment.center,
+      children: [
+        _buildHeader(company, logoImage: logoImage, title: 'QUARTERLY MAINTENANCE REPORT'),
+        pw.Spacer(flex: 1),
+        pw.Text(
+          'CONTINUOUS INSPECTION RECORD',
+          style: pw.TextStyle(fontSize: 22, fontWeight: pw.FontWeight.bold, color: _primaryBlue),
+        ),
+        pw.SizedBox(height: 40),
+        pw.Container(
+          width: double.infinity,
+          padding: const pw.EdgeInsets.all(20),
+          decoration: pw.BoxDecoration(
+            border: pw.Border.all(color: _primaryBlue, width: 2),
+            color: _lightGrey,
+          ),
+          child: pw.Column(
+            crossAxisAlignment: pw.CrossAxisAlignment.start,
+            children: [
+              _infoRow('Customer / Partner', site.partnerName),
+              _infoRow('Service Site', site.name),
+              _infoRow('Site Address', site.address),
+              _infoRow('HQ Address', site.hqAddress),
+              _infoRow('Report Date', DateFormat('dd MMM yyyy').format(DateTime.now())),
+            ],
+          ),
+        ),
+        pw.Spacer(flex: 2),
+        pw.Text(
+          'CEL-RON ENTERPRISES PTE LTD',
+          style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold, color: _primaryBlue),
+        ),
+        pw.SizedBox(height: 10),
+        _buildFooter(company),
+      ],
+    );
   }
 
   static Future<Uint8List> generateVisitReport({
