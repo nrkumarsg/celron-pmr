@@ -501,7 +501,7 @@ class PdfService {
       ['Hz', asset.hz.toString()],
       ['Frequency (RPM/Hz)', frequency],
       ['Power (kW)', '${asset.powerKw} kW'],
-      ['Vibration (g)', inspection.vibrationG.toString()],
+      ['Vibration (g / mm/s)', '${inspection.vibrationG} / ${(inspection.vibrationG * 31.2).toStringAsFixed(2)}'],
       ['Temperature (°C)', inspection.temperatureC.toString()],
       ['Inspection Date', DateFormat('dd MMM yyyy').format(inspection.date)],
       ['Status', inspection.overallStatus],
