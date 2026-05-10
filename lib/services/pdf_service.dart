@@ -15,14 +15,11 @@ const _lightGrey = PdfColor.fromInt(0xFFF5F5F5);
 const _charcoal = PdfColor.fromInt(0xFF333333);
 
 class PdfService {
-  /// Load the CEL-RON logo from assets bundle.
-  static Future<pw.ImageProvider?> _loadLogo() async {
+  static Future<pw.ImageProvider?> _loadImage(String path) async {
     try {
-      final ByteData data = await rootBundle.load('assets/celronlogo.jpg');
-      final Uint8List bytes = data.buffer.asUint8List();
-      return pw.MemoryImage(bytes);
-    } catch (e) {
-      // If logo load fails, return null — header will degrade gracefully.
+      final ByteData data = await rootBundle.load(path);
+      return pw.MemoryImage(data.buffer.asUint8List());
+    } catch (_) {
       return null;
     }
   }
@@ -34,7 +31,10 @@ class PdfService {
     required Inspection inspection,
   }) async {
     final pdf = pw.Document();
-    final logoImage = await _loadLogo();
+    final logoImage = await _loadImage('assets/celronlogo.jpg');
+    final isoLogo = await _loadImage('assets/iso_logo.png');
+    final bizsafeLogo = await _loadImage('assets/bizsafe_logo.png');
+    final signatureImage = await _loadImage('assets/signature.png');
 
     pdf.addPage(
       pw.MultiPage(
@@ -42,7 +42,7 @@ class PdfService {
         margin: const pw.EdgeInsets.all(32),
         build: (pw.Context context) {
           return [
-            _buildHeader(company, logoImage: logoImage, reportNo: 'IR-${inspection.id.substring(inspection.id.length > 4 ? inspection.id.length - 4 : 0)}'),
+            _buildHeader(company, logoImage: logoImage, isoLogo: isoLogo, bizsafeLogo: bizsafeLogo, reportNo: 'IR-${inspection.id.substring(inspection.id.length > 4 ? inspection.id.length - 4 : 0)}'),
             pw.SizedBox(height: 20),
             _buildProjectInfo(site, asset, inspection),
             pw.SizedBox(height: 16),
@@ -52,9 +52,7 @@ class PdfService {
             pw.SizedBox(height: 10),
             _buildParameterTable('PIPES AND OTHERS', inspection.pipeParameters),
             pw.SizedBox(height: 30),
-            _buildSignatures(site),
-            pw.SizedBox(height: 20),
-            _buildFooter(company),
+            _buildSignatures(site, signatureImage: signatureImage),
           ];
         },
       ),
@@ -71,7 +69,10 @@ class PdfService {
     required String aiAnalysis,
   }) async {
     final pdf = pw.Document();
-    final logoImage = await _loadLogo();
+    final logoImage = await _loadImage('assets/celronlogo.jpg');
+    final isoLogo = await _loadImage('assets/iso_logo.png');
+    final bizsafeLogo = await _loadImage('assets/bizsafe_logo.png');
+    final signatureImage = await _loadImage('assets/signature.png');
 
     pdf.addPage(
       pw.MultiPage(
@@ -79,7 +80,7 @@ class PdfService {
         margin: const pw.EdgeInsets.all(32),
         build: (pw.Context context) {
           return [
-            _buildHeader(company, logoImage: logoImage, title: 'AI-ENHANCED REPORT (V2)', reportNo: 'AI-${inspection.id.substring(inspection.id.length > 4 ? inspection.id.length - 4 : 0)}'),
+            _buildHeader(company, logoImage: logoImage, isoLogo: isoLogo, bizsafeLogo: bizsafeLogo, title: 'AI-ENHANCED REPORT (V2)', reportNo: 'AI-${inspection.id.substring(inspection.id.length > 4 ? inspection.id.length - 4 : 0)}'),
             pw.SizedBox(height: 20),
             _buildProjectInfo(site, asset, inspection),
             pw.SizedBox(height: 16),
@@ -89,9 +90,7 @@ class PdfService {
             pw.SizedBox(height: 10),
             _buildParameterTable('PUMP PARAMETERS', inspection.pumpParameters),
             pw.SizedBox(height: 30),
-            _buildSignatures(site),
-            pw.SizedBox(height: 20),
-            _buildFooter(company),
+            _buildSignatures(site, signatureImage: signatureImage),
           ];
         },
       ),
@@ -106,14 +105,17 @@ class PdfService {
     required List<Map<String, dynamic>> assetData,
   }) async {
     final pdf = pw.Document();
-    final logoImage = await _loadLogo();
+    final logoImage = await _loadImage('assets/celronlogo.jpg');
+    final isoLogo = await _loadImage('assets/iso_logo.png');
+    final bizsafeLogo = await _loadImage('assets/bizsafe_logo.png');
+    final signatureImage = await _loadImage('assets/signature.png');
 
     // 1. Add Cover Page
     pdf.addPage(
       pw.Page(
         pageFormat: PdfPageFormat.a4,
         margin: const pw.EdgeInsets.all(32),
-        build: (pw.Context context) => _buildCoverPage(company, site, logoImage),
+        build: (pw.Context context) => _buildCoverPage(company, site, logoImage, isoLogo, bizsafeLogo),
       ),
     );
 
@@ -126,7 +128,7 @@ class PdfService {
           pageFormat: PdfPageFormat.a4,
           margin: const pw.EdgeInsets.all(32),
           build: (pw.Context context) => [
-            _buildHeader(company, logoImage: logoImage, reportNo: 'IR-${inspection.id.substring(inspection.id.length > 4 ? inspection.id.length - 4 : 0)}'),
+            _buildHeader(company, logoImage: logoImage, isoLogo: isoLogo, bizsafeLogo: bizsafeLogo, reportNo: 'IR-${inspection.id.substring(inspection.id.length > 4 ? inspection.id.length - 4 : 0)}'),
             pw.SizedBox(height: 20),
             _buildProjectInfo(site, asset, inspection),
             pw.SizedBox(height: 16),
@@ -136,9 +138,7 @@ class PdfService {
             pw.SizedBox(height: 10),
             _buildParameterTable('PIPES AND OTHERS', inspection.pipeParameters),
             pw.SizedBox(height: 30),
-            _buildSignatures(site),
-            pw.SizedBox(height: 20),
-            _buildFooter(company),
+            _buildSignatures(site, signatureImage: signatureImage),
           ],
         ),
       );
@@ -152,14 +152,17 @@ class PdfService {
     required List<Map<String, dynamic>> assetData,
   }) async {
     final pdf = pw.Document();
-    final logoImage = await _loadLogo();
+    final logoImage = await _loadImage('assets/celronlogo.jpg');
+    final isoLogo = await _loadImage('assets/iso_logo.png');
+    final bizsafeLogo = await _loadImage('assets/bizsafe_logo.png');
+    final signatureImage = await _loadImage('assets/signature.png');
 
     // 1. Add Cover Page
     pdf.addPage(
       pw.Page(
         pageFormat: PdfPageFormat.a4,
         margin: const pw.EdgeInsets.all(32),
-        build: (pw.Context context) => _buildCoverPage(company, site, logoImage),
+        build: (pw.Context context) => _buildCoverPage(company, site, logoImage, isoLogo, bizsafeLogo),
       ),
     );
 
@@ -174,7 +177,7 @@ class PdfService {
           pageFormat: PdfPageFormat.a4,
           margin: const pw.EdgeInsets.all(32),
           build: (pw.Context context) => [
-            _buildHeader(company, logoImage: logoImage, title: 'AI-ENHANCED REPORT (V2)', reportNo: 'AI-${inspection.id.substring(inspection.id.length > 4 ? inspection.id.length - 4 : 0)}'),
+            _buildHeader(company, logoImage: logoImage, isoLogo: isoLogo, bizsafeLogo: bizsafeLogo, title: 'AI-ENHANCED REPORT (V2)', reportNo: 'AI-${inspection.id.substring(inspection.id.length > 4 ? inspection.id.length - 4 : 0)}'),
             pw.SizedBox(height: 20),
             _buildProjectInfo(site, asset, inspection),
             pw.SizedBox(height: 16),
@@ -184,9 +187,7 @@ class PdfService {
             pw.SizedBox(height: 10),
             _buildParameterTable('PUMP PARAMETERS', inspection.pumpParameters),
             pw.SizedBox(height: 30),
-            _buildSignatures(site),
-            pw.SizedBox(height: 20),
-            _buildFooter(company),
+            _buildSignatures(site, signatureImage: signatureImage),
           ],
         ),
       );
@@ -194,11 +195,11 @@ class PdfService {
     return pdf.save();
   }
 
-  static pw.Widget _buildCoverPage(Company company, Site site, pw.ImageProvider? logoImage) {
+  static pw.Widget _buildCoverPage(Company company, Site site, pw.ImageProvider? logoImage, pw.ImageProvider? isoLogo, pw.ImageProvider? bizsafeLogo) {
     return pw.Column(
       crossAxisAlignment: pw.CrossAxisAlignment.center,
       children: [
-        _buildHeader(company, logoImage: logoImage, title: 'INSPECTION REPORT'),
+        _buildHeader(company, logoImage: logoImage, isoLogo: isoLogo, bizsafeLogo: bizsafeLogo, title: 'INSPECTION REPORT'),
         pw.Spacer(flex: 1),
         pw.Text(
           'CONTINUOUS INSPECTION RECORD',
@@ -229,7 +230,6 @@ class PdfService {
           style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold, color: _primaryBlue),
         ),
         pw.SizedBox(height: 10),
-        _buildFooter(company),
       ],
     );
   }
@@ -242,14 +242,18 @@ class PdfService {
     required String jobDescription,
   }) async {
     final pdf = pw.Document();
-    final logoImage = await _loadLogo();
+    final logoImage = await _loadImage('assets/celronlogo.jpg');
+    final isoLogo = await _loadImage('assets/iso_logo.png');
+    final bizsafeLogo = await _loadImage('assets/bizsafe_logo.png');
+    final signatureImage = await _loadImage('assets/signature.png');
 
+    // 1. Summary Page
     pdf.addPage(
       pw.MultiPage(
         pageFormat: PdfPageFormat.a4,
         margin: const pw.EdgeInsets.all(32),
         build: (pw.Context context) => [
-          _buildHeader(company, logoImage: logoImage, title: 'SERVICE REPORT'),
+          _buildHeader(company, logoImage: logoImage, isoLogo: isoLogo, bizsafeLogo: bizsafeLogo, title: 'SERVICE REPORT'),
           pw.SizedBox(height: 10),
           pw.Container(
             width: double.infinity,
@@ -267,12 +271,37 @@ class PdfService {
           pw.SizedBox(height: 20),
           _buildSummaryTable(assetData),
           pw.SizedBox(height: 40),
-          _buildSignatures(site),
+          _buildSignatures(site, signatureImage: signatureImage),
           pw.Spacer(),
-          _buildFooter(company),
         ],
       ),
     );
+
+    // 2. Individual Certificates
+    for (var data in assetData) {
+      final asset = data['asset'] as Asset;
+      final inspection = data['inspection'] as Inspection;
+      pdf.addPage(
+        pw.MultiPage(
+          pageFormat: PdfPageFormat.a4,
+          margin: const pw.EdgeInsets.all(32),
+          build: (pw.Context context) => [
+            _buildHeader(company, logoImage: logoImage, isoLogo: isoLogo, bizsafeLogo: bizsafeLogo, reportNo: 'IR-${inspection.id.substring(inspection.id.length > 4 ? inspection.id.length - 4 : 0)}'),
+            pw.SizedBox(height: 20),
+            _buildProjectInfo(site, asset, inspection),
+            pw.SizedBox(height: 16),
+            _buildParameterTable('MOTOR PARAMETERS', inspection.motorParameters),
+            pw.SizedBox(height: 10),
+            _buildParameterTable('PUMP PARAMETERS', inspection.pumpParameters),
+            pw.SizedBox(height: 10),
+            _buildParameterTable('PIPES AND OTHERS', inspection.pipeParameters),
+            pw.SizedBox(height: 30),
+            _buildSignatures(site, signatureImage: signatureImage),
+          ],
+        ),
+      );
+    }
+
     return pdf.save();
   }
 
@@ -282,6 +311,8 @@ class PdfService {
   static pw.Widget _buildHeader(
     Company company, {
     pw.ImageProvider? logoImage,
+    pw.ImageProvider? isoLogo,
+    pw.ImageProvider? bizsafeLogo,
     String title = 'INSPECTION REPORT',
     String? reportNo,
   }) {
@@ -313,7 +344,20 @@ class PdfService {
                         ),
                       ),
               ),
-              // Company Name in centre
+              if (isoLogo != null)
+                pw.Container(
+                  width: 45,
+                  height: 45,
+                  margin: const pw.EdgeInsets.only(left: 10),
+                  child: pw.Image(isoLogo, fit: pw.BoxFit.contain),
+                ),
+              if (bizsafeLogo != null)
+                pw.Container(
+                  width: 45,
+                  height: 45,
+                  margin: const pw.EdgeInsets.only(left: 10),
+                  child: pw.Image(bizsafeLogo, fit: pw.BoxFit.contain),
+                ),
               // Company Name - Right Aligned
               pw.Expanded(
                 child: pw.Align(
@@ -660,17 +704,17 @@ class PdfService {
     );
   }
 
-  static pw.Widget _buildSignatures(Site site) {
+  static pw.Widget _buildSignatures(Site site, {pw.ImageProvider? signatureImage}) {
     return pw.Row(
       mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
       children: [
-        _signatureBox('AUTHORIZED SIGNATURE', 'CEL-RON ENTERPRISES PTE LTD'),
+        _signatureBox('AUTHORIZED SIGNATURE', 'CEL-RON ENTERPRISES PTE LTD', signatureImage: signatureImage),
         _signatureBox('CUSTOMER ACKNOWLEDGMENT', site.partnerName.toUpperCase()),
       ],
     );
   }
 
-  static pw.Widget _signatureBox(String role, String entity) {
+  static pw.Widget _signatureBox(String role, String entity, {pw.ImageProvider? signatureImage}) {
     return pw.Expanded(
       child: pw.Container(
         margin: const pw.EdgeInsets.symmetric(horizontal: 8),
@@ -685,7 +729,9 @@ class PdfService {
               height: 60,
               padding: const pw.EdgeInsets.all(8),
               alignment: pw.Alignment.bottomLeft,
-              child: pw.Text('Signature:', style: pw.TextStyle(fontSize: 7, color: PdfColors.grey500)),
+              child: role == 'AUTHORIZED SIGNATURE' && signatureImage != null
+                  ? pw.Image(signatureImage, height: 45, fit: pw.BoxFit.contain)
+                  : pw.Text('Signature:', style: pw.TextStyle(fontSize: 7, color: PdfColors.grey500)),
             ),
             pw.Container(height: 1, color: PdfColors.grey300),
             // Label
@@ -702,28 +748,6 @@ class PdfService {
             ),
           ],
         ),
-      ),
-    );
-  }
-
-  static pw.Widget _buildFooter(Company company) {
-    return pw.Container(
-      padding: const pw.EdgeInsets.only(top: 6),
-      decoration: const pw.BoxDecoration(
-        border: pw.Border(top: pw.BorderSide(color: _primaryBlue, width: 1)),
-      ),
-      child: pw.Row(
-        mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-        children: [
-          pw.Text(
-            'CEL-RON ENTERPRISES PTE LTD  |  ${company.regOffice}',
-            style: const pw.TextStyle(fontSize: 6.5, color: _primaryBlue),
-          ),
-          pw.Text(
-            company.web,
-            style: pw.TextStyle(fontSize: 6.5, color: _safetyRed, fontWeight: pw.FontWeight.bold),
-          ),
-        ],
       ),
     );
   }
