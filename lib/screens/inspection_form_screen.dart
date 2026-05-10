@@ -76,37 +76,37 @@ class _InspectionFormScreenState extends State<InspectionFormScreen> {
   void _initializeDefaults() {
     _motorParams = {
       'Loose or Missing Bolts, Terminal block': {'status': 'OK', 'remark': ''},
-      'Variable speed drive': {'status': 'OK', 'remark': ''},
+      'Variable speed drive': {'status': 'N/A', 'remark': ''},
       'Panel temperature by thermal scanning': {'status': 'OK', 'remark': ''},
       'Selector switch and indication lamps': {'status': 'OK', 'remark': ''},
       'Contactor, relays, MCB, timer, loose connection': {'status': 'OK', 'remark': ''},
       'Dust & foreign materials (keep dry)': {'status': 'OK', 'remark': ''},
       'Corrosion on the internal & external of panel': {'status': 'OK', 'remark': ''},
-      'Motor winding resistance': {'status': 'OK', 'remark': 'U1-V1= 0.31 Ω, U1-W1= 0.31 Ω, V1-W1= 0.32 Ω'},
-      'Motor insulation resistance': {'status': 'OK', 'remark': 'U1-E=2000MΩ, V1-E =2000MΩ, W1-E =2000MΩ'},
-      'Incoming voltage': {'status': 'OK', 'remark': 'L1-L2= 421V  L1-L3=420V     L2-L3=420V'},
+      'Motor winding resistance': {'status': 'OK', 'remark': 'U1-V1= 10.2 Ω, U1-W1= 10.2 Ω, V1-W1= 10.2 Ω'},
+      'Motor insulation resistance': {'status': 'OK', 'remark': 'U1-E= 900 MΩ, V1-E= 900 MΩ, W1-E= 900 MΩ'},
+      'Incoming voltage': {'status': 'OK', 'remark': 'L1-L2= 413 V, L1-L3= 413 V, L2-L3= 413 V'},
       'Motor abnormal noise': {'status': 'OK', 'remark': ''},
-      'Motor vibration value': {'status': 'OK', 'remark': 'DE= 0.4mm/s  NDE= 0.7mm/s    A=0.4 mm/s'},
-      'Motor voltage': {'status': 'OK', 'remark': 'U=245V       V=245V         W=245V'},
-      'Motor Running Current': {'status': 'OK', 'remark': 'U=10.4Amps  V=10.4Amps   W=10Amps'},
-      'NDE, DE & Body Temperature': {'status': 'OK', 'remark': 'NDE=32°C,   DE=32.2°C,    BODY=33.3°C'},
+      'Motor vibration value': {'status': 'OK', 'remark': 'DE= 0.4 mm/s, NDE= 0.5 mm/s, Axial= 0.4 mm/s'},
+      'Motor voltage': {'status': 'OK', 'remark': 'U1-V1= 412 V, U1-W1= 412 V, V1-W1= 412 V'},
+      'Motor Running Current': {'status': 'OK', 'remark': 'U1= 1.5 Amps, V1= 1.5 Amps, W1= 1.5 Amps'},
+      'NDE, DE & Body Temperature': {'status': 'OK', 'remark': 'NDE= 26°C, DE= 25°C, BODY= 27°C'},
       'Motor running': {'status': 'OK', 'remark': ''},
     };
 
     _pumpParams = {
       'Loose or Missing Bolts': {'status': 'OK', 'remark': ''},
-      'Excessive or Abnormal noise': {'status': 'OK', 'remark': ''},
+      'Excessive or Abnormal noise': {'status': 'N/A', 'remark': ''},
       'Leak from the mech. Seal': {'status': 'OK', 'remark': ''},
       'Leak from Pump Casing, inlet & outlet flange': {'status': 'OK', 'remark': ''},
-      'Inspect Suction line strainer': {'status': 'OK', 'remark': ''},
-      'pump inboard, outboard and Body Temp': {'status': 'OK', 'remark': 'IB= 31°C,    OB= 31°C,      BODY=31°C'},
+      'Inspect Suction line strainer': {'status': 'N/A', 'remark': ''},
+      'pump inboard, outboard and Body Temp': {'status': 'OK', 'remark': 'IB= 25°C, OB= 25°C, BODY= 27°C'},
       'Excessive vibration by Physical touch': {'status': 'OK', 'remark': ''},
     };
 
     _pipeParams = {
-      'Suction Gate valve': {'status': 'OK', 'remark': 'IB= 31°C,    OB= 31°C,      BODY=31°C'},
+      'Suction Gate valve': {'status': 'OK', 'remark': 'IB= 26°C, OB= 26°C, BODY= 26°C'},
       'Strainer': {'status': 'N/A', 'remark': ''},
-      'Check Valve18': {'status': 'OK', 'remark': ''},
+      'Check Valve': {'status': 'OK', 'remark': ''},
       'Pipes': {'status': 'OK', 'remark': ''},
     };
   }
