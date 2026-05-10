@@ -32,6 +32,14 @@ void main() async {
     options: DefaultFirebaseOptions.currentPlatform,
   );
 
+  // Load environment variables for AI features
+  try {
+    await dotenv.load(fileName: "assets/.env");
+    print('DotEnv loaded successfully.');
+  } catch (e) {
+    print('DotEnv loading failed (continuing without AI keys): $e');
+  }
+
   // Initialize Dependency Injection
   await di.init();
 

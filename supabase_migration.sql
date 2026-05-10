@@ -83,6 +83,8 @@ CREATE TABLE IF NOT EXISTS public.service_visits (
   visit_date    TIMESTAMPTZ NOT NULL DEFAULT now(),
   notes         TEXT NOT NULL DEFAULT '',
   status        TEXT NOT NULL DEFAULT 'OPEN',
+  job_type      TEXT NOT NULL DEFAULT 'AD_HOC',
+  contract_ends TIMESTAMPTZ,
   created_at    TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
