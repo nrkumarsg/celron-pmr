@@ -609,7 +609,7 @@ class PdfService {
                       style: pw.TextStyle(fontSize: 8, fontWeight: pw.FontWeight.bold, color: statusColor),
                     ),
                   ),
-                  pw.Padding(padding: const pw.EdgeInsets.all(5), child: pw.Text(e.value['remark'] as String? ?? '', style: const pw.TextStyle(fontSize: 8, color: _charcoal))),
+                  pw.Padding(padding: const pw.EdgeInsets.all(5), child: pw.Text((e.value['remark'] as String? ?? '').replaceAll('Ω', 'Ohm'), style: const pw.TextStyle(fontSize: 8, color: _charcoal))),
                 ],
               );
             }),
