@@ -50,8 +50,8 @@ class _InspectionFormScreenState extends State<InspectionFormScreen> {
 
   late TextEditingController _partnerRefController;
   late TextEditingController _velocityController;
-  final _inspectionByController = TextEditingController(text: 'Service Engineer');
-  final _quarterlyCycleController = TextEditingController(text: 'Q1-2025');
+  final _inspectionByController = TextEditingController(text: 'N.R.Kumar');
+  final _quarterlyCycleController = TextEditingController(text: 'Q1-2026');
 
   @override
   void initState() {
@@ -60,6 +60,7 @@ class _InspectionFormScreenState extends State<InspectionFormScreen> {
     _partnerRefController = TextEditingController(text: widget.visit?.customerRef ?? 'PART-REF-001');
     _velocityController = TextEditingController(text: _velocityMms.toString());
     _initializeDefaults();
+    _updateVelocityFromG(); // Calculate initial velocity
     _updateStatus();
   }
 
@@ -75,46 +76,150 @@ class _InspectionFormScreenState extends State<InspectionFormScreen> {
 
   void _initializeDefaults() {
     // Determine specific defaults based on asset reference
-    final isPump1 = widget.asset.reference.contains('P7651-07') || widget.asset.name.contains('Pump-1');
+    final isWashWater1 = widget.asset.reference.contains('P7651-07') || widget.asset.name.contains('Wash Water Pump-1');
+    final isRawWater1 = widget.asset.reference.contains('P7014-01') || widget.asset.name.contains('Raw Water/Back Wash Pump-1');
+    final isRawWater2 = widget.asset.reference.contains('P7014-02') || widget.asset.name.contains('Raw Water/Back Wash Pump-2');
+    final isROHighPressure = widget.asset.reference.contains('P7014-04') || widget.asset.name.contains('RO High Pressure');
+    final isPurifiedWater = widget.asset.reference.contains('P7015-01') || widget.asset.name.contains('Purified Water');
+    final isOzoneCirc = widget.asset.reference.contains('P7015-02') || widget.asset.name.contains('Ozone Circulation');
+    final isEQPump1 = widget.asset.name.contains('EQ-Pump-1');
+    final isEQPump2 = widget.asset.name.contains('EQ-Pump-2');
+    final isEQPump = isEQPump1 || isEQPump2;
+    final isDrainPump1 = widget.asset.reference.contains('P7051-03') || widget.asset.name.contains('Drain Pump-1');
+    final isDrainPump2 = widget.asset.reference.contains('P7051-04') || widget.asset.name.contains('Drain Pump-2');
+    final isDrainPump = isDrainPump1 || isDrainPump2;
+    final isCirculationPump = widget.asset.reference.contains('P7014-05') || widget.asset.name.contains('Circulation Pump');
+    
+    final isSpecialCase = isRawWater1 || isRawWater2 || isROHighPressure || isPurifiedWater || isOzoneCirc || isDrainPump || isCirculationPump;
     
     _motorParams = {
       'Loose or Missing Bolts, Terminal block': {'status': 'OK', 'remark': ''},
-      'Variable speed drive': {'status': 'N/A', 'remark': ''},
+      'Variable speed drive': {'status': (isOzoneCirc || isEQPump || isDrainPump || isCirculationPump) ? 'N/A' : 'OK', 'remark': ''},
       'Panel temperature by thermal scanning': {'status': 'OK', 'remark': ''},
       'Selector switch and indication lamps': {'status': 'OK', 'remark': ''},
-      'Contactor, relays, MCB, timer, loose connection': {'status': 'OK', 'remark': ''},
+      'Contactor, relays, CB, timer, loose connection': {'status': 'OK', 'remark': ''},
       'Dust & foreign materials (keep dry)': {'status': 'OK', 'remark': ''},
       'Corrosion on the internal & external of panel': {'status': 'OK', 'remark': ''},
-      'Motor winding resistance': {'status': 'OK', 'remark': 'U1-V1= 10.2 Ω, U1-W1= 10.2 Ω, V1-W1= 10.2 Ω'},
-      'Motor insulation resistance': {'status': 'OK', 'remark': 'U1-E= 900 MΩ, V1-E= 900 MΩ, W1-E= 900 MΩ'},
-      'Incoming voltage': {'status': 'OK', 'remark': 'L1-L2= 413 V, L1-L3= 413 V, L2-L3= 413 V'},
+      'Motor winding resistance': {
+        'status': isSpecialCase ? 'N/A' : 'OK', 
+        'remark': isSpecialCase ? 'N/A' : 
+                  (isEQPump1 ? 'U1-V1= 15.6 Ω, U1-W1= 15.6 Ω, V1-W1= 15.6 Ω' :
+                  (isEQPump2 ? 'U1-V1= 15.7 Ω, U1-W1= 15.7 Ω, V1-W1= 15.7 Ω' : 'U1-V1= 10.2 Ω, U1-W1= 10.2 Ω, V1-W1= 10.2 Ω'))
+      },
+      'Motor insulation resistance': {
+        'status': isSpecialCase ? 'N/A' : 'OK', 
+        'remark': isSpecialCase ? 'N/A' : 
+                  (isEQPump ? 'U1-E= 500 MΩ, V1-E= 500 MΩ, W1-E= 500 MΩ' : 'U1-E= 900 MΩ, V1-E= 900 MΩ, W1-E= 900 MΩ')
+      },
+      'Incoming voltage': {
+        'status': 'OK', 
+        'remark': isRawWater1 ? 'L1-L2= 417 V, L1-L3= 417 V, L2-L3= 417 V' : 
+                  (isRawWater2 ? 'L1-L2= 415 V, L1-L3= 415 V, L2-L3= 415 V' : 
+                  (isROHighPressure ? 'L1-L2= 416 V, L1-L3= 416 V, L2-L3= 416 V' : 
+                  (isPurifiedWater ? 'L1-L2= 416 V, L1-L3= 417 V, L2-L3= 417 V' : 
+                  (isOzoneCirc ? 'L1-L2= 415 V, L1-L3= 415 V, L2-L3= 415 V' : 
+                  (isEQPump1 ? 'L1-L2= 418 V, L1-L3= 418 V, L2-L3= 418 V' :
+                  (isEQPump2 ? 'L1-L2= 420 V, L1-L3= 420 V, L2-L3= 420 V' : 
+                  (isDrainPump ? 'L1-L2= 413 V, L1-L3= 413 V, L2-L3= 413 V' : 
+                  (isCirculationPump ? 'L1-L2= 415 V, L1-L3= 415 V, L2-L3= 415 V' : 'L1-L2= 413 V, L1-L3= 413 V, L2-L3= 413 V'))))))))
+      },
       'Motor abnormal noise': {'status': 'OK', 'remark': ''},
-      'Motor vibration value': {'status': 'OK', 'remark': isPump1 ? 'DE= mm/s, NDE= mm/s, Axial= mm/s' : 'DE= 0.4 mm/s, NDE= 0.5 mm/s, Axial= 0.4 mm/s'},
-      'Motor voltage': {'status': 'OK', 'remark': isPump1 ? 'U1-V1= V, U1-W1= V, V1-W1= V' : 'U1-V1= 412 V, U1-W1= 412 V, V1-W1= 412 V'},
-      'Motor Running Current': {'status': 'OK', 'remark': isPump1 ? 'U1= Amps, V1= Amps, W1= Amps' : 'U1= 1.5 Amps, V1= 1.5 Amps, W1= 1.5 Amps'},
-      'NDE, DE & Body Temperature': {'status': 'OK', 'remark': isPump1 ? 'NDE= °C, DE= °C, BODY= °C' : 'NDE= 26°C, DE= 25°C, BODY= 27°C'},
+      'Motor vibration value': {
+        'status': 'OK', 
+        'remark': isRawWater1 ? 'DE= 0.5 mm/s, NDE= 0.4 mm/s, Axial= 0.5 mm/s' : 
+                  (isRawWater2 ? 'DE= 0.5 mm/s, NDE= 0.8 mm/s, Axial= 0.9 mm/s' : 
+                  (isROHighPressure ? 'DE= 0.4 mm/s, NDE= 0.5 mm/s, Axial= 0.4 mm/s' : 
+                  (isPurifiedWater ? 'DE= 0.5 mm/s, NDE= 0.4 mm/s, Axial= 0.5 mm/s' :
+                  (isOzoneCirc ? 'DE= 0.5 mm/s, NDE= 0.4 mm/s, Axial= 0.5 mm/s' :
+                  (isEQPump ? 'DE= 0.4 mm/s, NDE= 0.5 mm/s, Axial= 0.4 mm/s' :
+                  (isDrainPump ? 'DE= 0.4 mm/s, NDE= 0.5 mm/s, Axial= 0.4 mm/s' :
+                  (isCirculationPump ? 'DE= 4.4 mm/s, NDE= 2.6 mm/s, Axial= 18.8 mm/s' :
+                  (isWashWater1 ? 'DE= mm/s, NDE= mm/s, Axial= mm/s' : 'DE= 0.4 mm/s, NDE= 0.5 mm/s, Axial= 0.4 mm/s'))))))))
+      },
+      'Motor voltage': {
+        'status': 'OK', 
+        'remark': isRawWater1 ? 'U1-V1= 226 V, U1-W1= 226 V, V1-W1= 226 V' : 
+                  (isRawWater2 ? 'U1-V1= 190 V, U1-W1= 192 V, V1-W1= 197 V' : 
+                  (isROHighPressure ? 'U1-V1= 338 V, U1-W1= 338 V, V1-W1= 338 V' : 
+                  (isPurifiedWater ? 'U1-V1= 346 V, U1-W1= 346 V, V1-W1= 346 V' :
+                  (isOzoneCirc ? 'U1-V1= 415 V, U1-W1= 415 V, V1-W1= 415 V' :
+                  (isEQPump1 ? 'U1-V1= 418 V, U1-W1= 418 V, V1-W1= 418 V' :
+                  (isEQPump2 ? 'U1-V1= 420 V, U1-W1= 420 V, V1-W1= 420 V' :
+                  (isDrainPump ? 'U1-V1= 236 V, U1-W1= 236 V, V1-W1= 236 V' :
+                  (isCirculationPump ? 'U1-V1= 415 V, U1-W1= 415 V, V1-W1= 415 V' :
+                  (isWashWater1 ? 'U1-V1= V, U1-W1= V, V1-W1= V' : 'U1-V1= 412 V, U1-W1= 412 V, V1-W1= 412 V')))))))))
+      },
+      'Motor Running Current': {
+        'status': 'OK', 
+        'remark': isRawWater1 ? 'U1= 2.6 Amps, V1= 2.6 Amps, W1= 2.6 Amps' : 
+                  (isRawWater2 ? 'U1= 0.3 Amps, V1= 0.3 Amps, W1= 0.3 Amps' : 
+                  (isROHighPressure ? 'U1= 9.3 Amps, V1= 9.3 Amps, W1= 9.3 Amps' : 
+                  (isPurifiedWater ? 'U1= 12.4 Amps, V1= 12.4 Amps, W1= 12.4 Amps' :
+                  (isOzoneCirc ? 'U1= 4.3 Amps, V1= 4.3 Amps, W1= 4.3 Amps' :
+                  (isEQPump ? 'U1= 1.6 Amps, V1= 1.6 Amps, W1= 1.6 Amps' :
+                  (isDrainPump ? 'U1= 1.5 Amps, V1= 1.5 Amps, W1= 1.5 Amps' :
+                  (isCirculationPump ? 'U1= 2.0 Amps, V1= 2.0 Amps, W1= 2.0 Amps' :
+                  (isWashWater1 ? 'U1= Amps, V1= Amps, W1= Amps' : 'U1= 1.5 Amps, V1= 1.5 Amps, W1= 1.5 Amps'))))))))
+      },
+      'NDE, DE & Body Temperature': {
+        'status': 'OK', 
+        'remark': isRawWater1 ? 'NDE= 34°C, DE= 29°C, BODY= 34°C' : 
+                  (isRawWater2 ? 'NDE= 29°C, DE= 26°C, BODY= 27°C' : 
+                  (isROHighPressure ? 'NDE= 33°C, DE= 37°C, BODY= 41°C' : 
+                  (isPurifiedWater ? 'NDE= 26°C, DE= 27°C, BODY= 27°C' :
+                  (isOzoneCirc ? 'NDE= 28°C, DE= 27°C, BODY= 28°C' :
+                  (isEQPump ? 'NDE= 26°C, DE= 25°C, BODY= 27°C' :
+                  (isDrainPump ? 'NDE= 26°C, DE= 25°C, BODY= 27°C' :
+                  (isCirculationPump ? 'NDE= 32°C, DE= 37°C, BODY= 37°C' :
+                  (isWashWater1 ? 'NDE= °C, DE= °C, BODY= °C' : 'NDE= 26°C, DE= 25°C, BODY= 27°C'))))))))
+      },
       'Motor running': {'status': 'OK', 'remark': ''},
     };
 
     _pumpParams = {
       'Loose or Missing Bolts': {'status': 'OK', 'remark': ''},
-      'Excessive or Abnormal noise': {'status': 'N/A', 'remark': ''},
+      'Excessive or Abnormal noise': {'status': 'OK', 'remark': ''},
       'Leak from the mech. Seal': {'status': 'OK', 'remark': ''},
       'Leak from Pump Casing, inlet & outlet flange': {'status': 'OK', 'remark': ''},
       'Inspect Suction line strainer': {'status': 'N/A', 'remark': ''},
-      'pump inboard, outboard and Body Temp': {'status': 'OK', 'remark': isPump1 ? 'IB= °C, OB= °C, BODY= °C' : 'IB= 25°C, OB= 25°C, BODY= 27°C'},
+      'pump inboard, outboard and Body Temp': {
+        'status': 'OK', 
+        'remark': isRawWater1 ? 'IB= 28°C, OB= 26°C, BODY= 27°C' : 
+                  (isRawWater2 ? 'IB= 25°C, OB= 25°C, BODY= 27°C' : 
+                  (isROHighPressure ? 'IB= 31°C, OB= 32°C, BODY= 31°C' : 
+                  (isPurifiedWater ? 'IB= 25°C, OB= 26°C, BODY= 25°C' :
+                  (isOzoneCirc ? 'IB= 26°C, OB= 26°C, BODY= 27°C' :
+                  (isEQPump ? 'IB= 25°C, OB= 25°C, BODY= 27°C' :
+                  (isDrainPump ? 'IB= 25°C, OB= 25°C, BODY= 27°C' :
+                  (isCirculationPump ? 'IB= 27°C, OB= 27°C, BODY= 27°C' :
+                  (isWashWater1 ? 'IB= °C, OB= °C, BODY= °C' : 'IB= 25°C, OB= 25°C, BODY= 27°C'))))))))
+      },
       'Excessive vibration by Physical touch': {'status': 'OK', 'remark': ''},
     };
 
     _pipeParams = {
-      'Suction Gate valve': {'status': 'OK', 'remark': isPump1 ? 'IB= °C, OB= °C, BODY= °C' : 'IB= 26°C, OB= 26°C, BODY= 26°C'},
-      'Strainer': {'status': 'N/A', 'remark': ''},
+      'Suction Gate valve': {
+        'status': 'OK', 
+        'remark': isRawWater1 ? 'IB= 26°C, OB= 27°C, BODY= 27°C' : 
+                  (isRawWater2 ? 'IB= 26°C, OB= 26°C, BODY= 26°C' : 
+                  (isROHighPressure ? 'IB= 29°C, OB= 30°C, BODY= 30°C' : 
+                  (isPurifiedWater ? 'IB= 26°C, OB= 25°C, BODY= 26°C' :
+                  (isOzoneCirc ? 'IB= 26°C, OB= 25°C, BODY= 26°C' :
+                  (isEQPump ? 'IB= 26°C, OB= 26°C, BODY= 26°C' :
+                  (isDrainPump ? 'IB= 26°C, OB= 26°C, BODY= 26°C' :
+                  (isCirculationPump ? 'IB= 26°C, OB= 26°C, BODY= 26°C' :
+                  (isWashWater1 ? 'IB= °C, OB= °C, BODY= °C' : 'IB= 26°C, OB= 26°C, BODY= 26°C'))))))))
+      },
+      'Strainer': {'status': (isEQPump || isDrainPump || isCirculationPump) ? 'OK' : 'N/A', 'remark': ''},
       'Check Valve': {'status': 'OK', 'remark': ''},
       'Pipes': {'status': 'OK', 'remark': ''},
     };
   }
 
   void _updateVelocityFromG() {
+    // Formula: Velocity (mm/s) = (g * 9.81 * 1000) / (2 * pi * f)
+    // Simplified for 50Hz (3000 RPM) operation commonly used in these pumps:
+    // Velocity (mm/s) ≈ g * 31.2
     _velocityMms = double.parse((_vibrationG * 31.2).toStringAsFixed(2));
     _velocityController.text = _velocityMms.toString();
   }
