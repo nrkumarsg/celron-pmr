@@ -58,7 +58,7 @@ class _VisitListScreenState extends State<VisitListScreen> {
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => _showAddVisitDialog(),
-        label: const Text('Start New Quarterly Visit'),
+        label: const Text('Start New Inspection Services'),
         icon: const Icon(Icons.add_task),
         backgroundColor: const Color(0xFFC0392B),
         foregroundColor: Colors.white,
