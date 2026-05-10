@@ -63,6 +63,43 @@ class PdfService {
     return pdf.save();
   }
 
+  static Future<Uint8List> generateAIInspectionPdf({
+    required Company company,
+    required Site site,
+    required Asset asset,
+    required Inspection inspection,
+    required String aiAnalysis,
+  }) async {
+    final pdf = pw.Document();
+    final logoImage = await _loadLogo();
+
+    pdf.addPage(
+      pw.MultiPage(
+        pageFormat: PdfPageFormat.a4,
+        margin: const pw.EdgeInsets.all(32),
+        build: (pw.Context context) {
+          return [
+            _buildHeader(company, logoImage: logoImage, title: 'AI-ENHANCED REPORT (V2)', reportNo: 'AI-${inspection.id.substring(inspection.id.length > 4 ? inspection.id.length - 4 : 0)}'),
+            pw.SizedBox(height: 20),
+            _buildProjectInfo(site, asset, inspection),
+            pw.SizedBox(height: 16),
+            _buildAIAnalysis(aiAnalysis),
+            pw.SizedBox(height: 16),
+            _buildParameterTable('MOTOR PARAMETERS', inspection.motorParameters),
+            pw.SizedBox(height: 10),
+            _buildParameterTable('PUMP PARAMETERS', inspection.pumpParameters),
+            pw.SizedBox(height: 30),
+            _buildSignatures(site),
+            pw.SizedBox(height: 20),
+            _buildFooter(company),
+          ];
+        },
+      ),
+    );
+
+    return pdf.save();
+  }
+
   static Future<Uint8List> generateMergedInspectionPdf({
     required Company company,
     required Site site,
@@ -109,11 +146,59 @@ class PdfService {
     return pdf.save();
   }
 
+  static Future<Uint8List> generateMergedAIInspectionPdf({
+    required Company company,
+    required Site site,
+    required List<Map<String, dynamic>> assetData,
+  }) async {
+    final pdf = pw.Document();
+    final logoImage = await _loadLogo();
+
+    // 1. Add Cover Page
+    pdf.addPage(
+      pw.Page(
+        pageFormat: PdfPageFormat.a4,
+        margin: const pw.EdgeInsets.all(32),
+        build: (pw.Context context) => _buildCoverPage(company, site, logoImage),
+      ),
+    );
+
+    // 2. Add Continuous AI Pages
+    for (var data in assetData) {
+      final asset = data['asset'] as Asset;
+      final inspection = data['inspection'] as Inspection;
+      final aiAnalysis = data['aiAnalysis'] as String? ?? 'Analysis pending...';
+
+      pdf.addPage(
+        pw.MultiPage(
+          pageFormat: PdfPageFormat.a4,
+          margin: const pw.EdgeInsets.all(32),
+          build: (pw.Context context) => [
+            _buildHeader(company, logoImage: logoImage, title: 'AI-ENHANCED REPORT (V2)', reportNo: 'AI-${inspection.id.substring(inspection.id.length > 4 ? inspection.id.length - 4 : 0)}'),
+            pw.SizedBox(height: 20),
+            _buildProjectInfo(site, asset, inspection),
+            pw.SizedBox(height: 16),
+            _buildAIAnalysis(aiAnalysis),
+            pw.SizedBox(height: 16),
+            _buildParameterTable('MOTOR PARAMETERS', inspection.motorParameters),
+            pw.SizedBox(height: 10),
+            _buildParameterTable('PUMP PARAMETERS', inspection.pumpParameters),
+            pw.SizedBox(height: 30),
+            _buildSignatures(site),
+            pw.SizedBox(height: 20),
+            _buildFooter(company),
+          ],
+        ),
+      );
+    }
+    return pdf.save();
+  }
+
   static pw.Widget _buildCoverPage(Company company, Site site, pw.ImageProvider? logoImage) {
     return pw.Column(
       crossAxisAlignment: pw.CrossAxisAlignment.center,
       children: [
-        _buildHeader(company, logoImage: logoImage, title: 'QUARTERLY MAINTENANCE REPORT'),
+        _buildHeader(company, logoImage: logoImage, title: 'INSPECTION REPORT'),
         pw.Spacer(flex: 1),
         pw.Text(
           'CONTINUOUS INSPECTION RECORD',
@@ -229,9 +314,12 @@ class PdfService {
                       ),
               ),
               // Company Name in centre
+              // Company Name - Right Aligned
               pw.Expanded(
-                child: pw.Center(
+                child: pw.Align(
+                  alignment: pw.Alignment.centerRight,
                   child: pw.Column(
+                    crossAxisAlignment: pw.CrossAxisAlignment.end,
                     children: [
                       pw.Text(
                         'CEL-RON ENTERPRISES PTE LTD',
@@ -250,25 +338,24 @@ class PdfService {
                   ),
                 ),
               ),
-              // Right spacer to balance logo
-              pw.SizedBox(width: 70),
             ],
           ),
         ),
 
-        // ── Address Sub-band ─────────────────────────────────────────────────
+        // ── Address Sub-band (Right Aligned) ─────────────────────────────────────────────────
         pw.Container(
           width: double.infinity,
           color: const PdfColor.fromInt(0xFF004080),
           padding: const pw.EdgeInsets.symmetric(horizontal: 12, vertical: 3),
           child: pw.Column(
-            crossAxisAlignment: pw.CrossAxisAlignment.start,
+            crossAxisAlignment: pw.CrossAxisAlignment.end,
             children: [
               pw.Text(
                 company.regOffice,
                 style: const pw.TextStyle(color: PdfColors.white, fontSize: 7),
               ),
               pw.Row(
+                mainAxisAlignment: pw.MainAxisAlignment.end,
                 children: [
                   pw.Text('Tel: ${company.phone}', style: const pw.TextStyle(color: PdfColors.white, fontSize: 7)),
                   pw.SizedBox(width: 12),
@@ -291,7 +378,7 @@ class PdfService {
           mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
           children: [
             pw.Text(
-              'Ref: ${reportNo ?? 'QTN-${DateFormat('yyMM').format(DateTime.now())}-0001'}',
+              'Ref: ${reportNo ?? 'IR-${DateFormat('yyMM').format(DateTime.now())}-0001'}',
               style: pw.TextStyle(fontSize: 9, fontWeight: pw.FontWeight.bold, color: _primaryBlue),
             ),
             pw.Container(
@@ -321,63 +408,82 @@ class PdfService {
     );
   }
 
+  static pw.Widget _buildAIAnalysis(String analysis) {
+    return pw.Column(
+      crossAxisAlignment: pw.CrossAxisAlignment.start,
+      children: [
+        _sectionHeader('AI DIAGNOSTIC ASSESSMENT (VER 2.0)'),
+        pw.Container(
+          width: double.infinity,
+          padding: const pw.EdgeInsets.all(10),
+          decoration: pw.BoxDecoration(
+            border: pw.Border.all(color: _primaryBlue, width: 0.5),
+            color: const PdfColor.fromInt(0xFFF0F7FF),
+          ),
+          child: pw.Text(
+            analysis,
+            style: const pw.TextStyle(fontSize: 8.5, color: _charcoal),
+          ),
+        ),
+      ],
+    );
+  }
+
   static pw.Widget _buildProjectInfo(Site site, Asset asset, Inspection inspection) {
+    String frequency = (asset.hz != 0) ? (asset.rpm / asset.hz).toStringAsFixed(2) : 'N/A';
+    
     final statusColor = inspection.overallStatus == 'CRITICAL'
         ? _safetyRed
         : inspection.overallStatus == 'MARGINAL'
             ? const PdfColor.fromInt(0xFFE65C00)
             : const PdfColor.fromInt(0xFF1A7A1A);
 
+    // Group fields into pairs for 2-column layout
+    final leftFields = [
+      ['Partner', site.partnerName],
+      ['Site Name', site.name],
+      ['Project Ref', inspection.projectRef],
+      ['Partner Ref', inspection.partnerRef],
+      ['Inspection By', inspection.inspectionBy],
+      ['Quarterly Cycle', inspection.quarterlyCycle],
+      ['System Name', asset.name],
+      ['System Ref', asset.reference],
+      ['Model', asset.model],
+    ];
+
+    final rightFields = [
+      ['Location', asset.location],
+      ['RPM', asset.rpm.toString()],
+      ['Hz', asset.hz.toString()],
+      ['Frequency (RPM/Hz)', frequency],
+      ['Power (kW)', '${asset.powerKw} kW'],
+      ['Vibration (g)', inspection.vibrationG.toString()],
+      ['Temperature (°C)', inspection.temperatureC.toString()],
+      ['Inspection Date', DateFormat('dd MMM yyyy').format(inspection.date)],
+      ['Status', inspection.overallStatus],
+    ];
+
     return pw.Column(
       crossAxisAlignment: pw.CrossAxisAlignment.start,
       children: [
         _sectionHeader('SYSTEM & SITE INFORMATION'),
-        _infoRow('Partner', site.partnerName),
-        _infoRow('Site Name', site.name),
-        _infoRow('Site Address', site.address),
-        _infoRow('Project Ref', inspection.projectRef),
-        _infoRow('Partner Ref', inspection.partnerRef),
-        _infoRow('Inspection By', inspection.inspectionBy),
-        _infoRow('Quarterly Cycle', inspection.quarterlyCycle),
-        _infoRow('System Name', asset.name),
-        _infoRow('System Ref', asset.reference),
-        _infoRow('Model', asset.model),
-        _infoRow('Location', asset.location),
-        _infoRow('RPM', asset.rpm.toStringAsFixed(0)),
-        _infoRow('Hz', asset.hz.toStringAsFixed(1)),
-        _infoRow('Frequency (RPM/Hz)', asset.hz != 0 ? (asset.rpm / asset.hz).toStringAsFixed(2) : 'N/A'),
-        _infoRow('Power (kW)', '${asset.powerKw} kW — Class: ${HealthLogic.getClass(asset.powerKw)}'),
-        _infoRow('Vibration (g)', inspection.vibrationG.toStringAsFixed(3)),
-        _infoRow('Temperature (°C)', inspection.temperatureC.toStringAsFixed(1)),
-        _infoRow('Inspection Date', DateFormat('dd MMM yyyy').format(inspection.date)),
-        // Status row with color
-        pw.Container(
-          decoration: pw.BoxDecoration(
-            border: pw.Border.all(color: PdfColors.grey400, width: 0.5),
-            color: _lightGrey,
-          ),
-          child: pw.Row(
-            children: [
-              pw.Container(
-                width: 130,
-                padding: const pw.EdgeInsets.all(5),
-                color: _primaryBlue,
-                child: pw.Text(
-                  'OVERALL STATUS',
-                  style: pw.TextStyle(fontSize: 9, fontWeight: pw.FontWeight.bold, color: PdfColors.white),
-                ),
+        pw.Row(
+          crossAxisAlignment: pw.CrossAxisAlignment.start,
+          children: [
+            pw.Expanded(
+              child: pw.Column(
+                children: leftFields.map((f) => _infoRow(f[0], f[1])).toList(),
               ),
-              pw.Expanded(
-                child: pw.Container(
-                  padding: const pw.EdgeInsets.all(5),
-                  child: pw.Text(
-                    inspection.overallStatus,
-                    style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold, color: statusColor),
-                  ),
-                ),
+            ),
+            pw.SizedBox(width: 20),
+            pw.Expanded(
+              child: pw.Column(
+                children: rightFields.map((f) => _infoRow(f[0], f[1], 
+                  valueColor: f[0] == 'Status' ? statusColor : null
+                )).toList(),
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ],
     );
@@ -395,21 +501,21 @@ class PdfService {
     );
   }
 
-  static pw.Widget _infoRow(String label, String value) {
+  static pw.Widget _infoRow(String label, String value, {PdfColor? valueColor}) {
     return pw.Container(
-      decoration: pw.BoxDecoration(border: pw.Border.all(color: PdfColors.grey300, width: 0.5)),
+      decoration: const pw.BoxDecoration(
+        border: pw.Border(bottom: pw.BorderSide(color: PdfColors.grey300, width: 0.5)),
+      ),
+      padding: const pw.EdgeInsets.symmetric(vertical: 3),
       child: pw.Row(
+        mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
         children: [
-          pw.Container(
-            width: 130,
-            padding: const pw.EdgeInsets.symmetric(vertical: 4, horizontal: 5),
-            color: _lightGrey,
-            child: pw.Text(label, style: pw.TextStyle(fontSize: 9, fontWeight: pw.FontWeight.bold, color: _charcoal)),
-          ),
-          pw.Expanded(
-            child: pw.Container(
-              padding: const pw.EdgeInsets.symmetric(vertical: 4, horizontal: 5),
-              child: pw.Text(value, style: const pw.TextStyle(fontSize: 9, color: _charcoal)),
+          pw.Text(label, style: pw.TextStyle(fontSize: 8.5, fontWeight: pw.FontWeight.bold, color: _charcoal)),
+          pw.Flexible(
+            child: pw.Text(
+              value, 
+              textAlign: pw.TextAlign.right,
+              style: pw.TextStyle(fontSize: 8.5, color: valueColor ?? _charcoal, fontWeight: valueColor != null ? pw.FontWeight.bold : pw.FontWeight.normal)
             ),
           ),
         ],

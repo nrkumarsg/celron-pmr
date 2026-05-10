@@ -13,6 +13,7 @@ import '../services/pdf_service.dart';
 import '../injection_container.dart';
 import 'asset_list_screen.dart';
 import 'inspection_form_screen.dart';
+import '../services/ai_service.dart';
 
 class VisitDetailScreen extends StatefulWidget {
   final ServiceVisit visit;
@@ -33,6 +34,7 @@ class VisitDetailScreen extends StatefulWidget {
 class _VisitDetailScreenState extends State<VisitDetailScreen> {
   final _assetRepo = sl<AssetRepository>();
   final _inspectionRepo = sl<InspectionRepository>();
+  final _aiService = sl<AIService>();
 
   @override
   Widget build(BuildContext context) {
@@ -189,9 +191,96 @@ class _VisitDetailScreenState extends State<VisitDetailScreen> {
               ),
             ],
           ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Expanded(
+                child: ElevatedButton.icon(
+                  onPressed: () => _generateContinuousAIReport(),
+                  icon: const Icon(Icons.psychology),
+                  label: const Text('AI Continuous (V2)'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.deepPurple[800],
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: ElevatedButton.icon(
+                  onPressed: () => _generateAIVisitSummary(),
+                  icon: const Icon(Icons.auto_awesome),
+                  label: const Text('AI Summary (V2)'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.teal[800],
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+                  ),
+                ),
+              ),
+            ],
+          ),
         ],
       ),
     );
+  }
+
+  void _generateContinuousAIReport() async {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Generating AI-Enhanced Continuous Reports (V2)...')),
+    );
+
+    try {
+      final assets = await _assetRepo.getAssets(widget.site.id);
+      final inspections = await _inspectionRepo.getAllInspectionsForSite(widget.site.id);
+      final visitInspections = inspections.where((i) => i.visitId == widget.visit.id).toList();
+
+      final List<Map<String, dynamic>> assetData = [];
+      for (var asset in assets) {
+        final insp = visitInspections.firstWhere(
+          (i) => i.assetId == asset.id,
+          orElse: () => Inspection(
+            id: 'PENDING', assetId: asset.id, date: DateTime.now(),
+            projectRef: '', partnerRef: '', inspectionBy: '',
+            quarterlyCycle: '', vibrationG: 0, temperatureC: 0,
+            motorParameters: {}, pumpParameters: {}, pipeParameters: {},
+            otherParameters: {}, overallStatus: 'PENDING'
+          ),
+        );
+        if (insp.id != 'PENDING') {
+          // Generate AI analysis for each asset
+          final analysis = await _aiService.analyzeInspection(asset, insp);
+          assetData.add({'asset': asset, 'inspection': insp, 'aiAnalysis': analysis});
+        }
+      }
+
+      if (assetData.isEmpty) {
+        if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('No inspections completed for this visit.')));
+        return;
+      }
+
+      final pdfBytes = await PdfService.generateMergedAIInspectionPdf(
+        company: widget.company,
+        site: widget.site,
+        assetData: assetData,
+      );
+
+      await Printing.layoutPdf(
+        onLayout: (format) => pdfBytes,
+        name: 'AI_Continuous_Report_${widget.visit.celronRef}.pdf',
+      );
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error generating AI PDF: $e')));
+    }
+  }
+
+  void _generateAIVisitSummary() async {
+     // For version 2 summary, we can do a high-level site-wide AI analysis
+     ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('AI Visit Summary (V2) feature coming soon. Using individual asset AI reports for now.')),
+    );
+    _generateContinuousAIReport();
   }
 
   void _generateContinuousPdf() async {

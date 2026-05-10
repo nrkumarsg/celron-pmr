@@ -1,5 +1,14 @@
 {
+  "name": "celron-pmr",
+  "version": "1.0.0",
+  "description": "CelRon Preventive Maintenance App",
+  "scripts": {
+    "start": "serve -s public",
+    "dev": "flutter run -d chrome",
+    "build": "flutter build web --release"
+  },
   "dependencies": {
-    "firebase": "^12.12.1"
+    "firebase": "^12.12.1",
+    "serve": "^14.2.1"
   }
 }

@@ -17,10 +17,19 @@ class SupabaseSiteRepository implements SiteRepository {
 
   @override
   Stream<List<Site>> getSitesStream() async* {
-    // 1. Yield local cache first for instant load
-    final cachedData = await _localCache.getCachedListData(_sitesCacheKey);
-    if (cachedData != null) {
-      yield cachedData.map((map) => Site.fromMap(map)).toList();
+    print('SupabaseSiteRepository: Getting sites stream...');
+    
+    try {
+      // 1. Yield local cache first for instant load
+      final cachedData = await _localCache.getCachedListData(_sitesCacheKey);
+      if (cachedData != null) {
+        yield cachedData
+            .where((e) => e != null)
+            .map((map) => Site.fromMap(Map<String, dynamic>.from(map)))
+            .toList();
+      }
+    } catch (e) {
+      print('SupabaseSiteRepository: Error loading cache: $e');
     }
 
     // 2. Yield remote stream and update cache on each emission
@@ -29,9 +38,18 @@ class SupabaseSiteRepository implements SiteRepository {
         .stream(primaryKey: ['id'])
         .order('name')
         .map((data) {
-          // Update cache asynchronously
-          _localCache.cacheListData(_sitesCacheKey, data);
-          return data.map((map) => Site.fromMap(map)).toList();
+          try {
+            print('SupabaseSiteRepository: Stream received ${data.length} sites');
+            // Update cache asynchronously
+            _localCache.cacheListData(_sitesCacheKey, data);
+            return data
+                .where((e) => e != null)
+                .map((map) => Site.fromMap(Map<String, dynamic>.from(map)))
+                .toList();
+          } catch (e) {
+            print('SupabaseSiteRepository: Error mapping stream data: $e');
+            return [];
+          }
         });
   }
 
@@ -41,14 +59,20 @@ class SupabaseSiteRepository implements SiteRepository {
       final response = await _client.from('sites').select().order('name');
       final data = response as List;
       // Convert elements to Map<String, dynamic> before caching
-      final listToCache = data.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+      final listToCache = data
+          .where((e) => e != null)
+          .map((e) => Map<String, dynamic>.from(e as Map))
+          .toList();
       await _localCache.cacheListData(_sitesCacheKey, listToCache);
-      return data.map((map) => Site.fromMap(map as Map<String, dynamic>)).toList();
+      return listToCache.map((map) => Site.fromMap(map)).toList();
     } catch (e) {
       print('Network error fetching sites, falling back to cache: $e');
       final cachedData = await _localCache.getCachedListData(_sitesCacheKey);
       if (cachedData != null) {
-        return cachedData.map((map) => Site.fromMap(map)).toList();
+        return cachedData
+            .where((e) => e != null)
+            .map((map) => Site.fromMap(Map<String, dynamic>.from(map)))
+            .toList();
       }
       return [];
     }

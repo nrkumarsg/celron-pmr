@@ -27,7 +27,10 @@ class LocalCacheService {
       if (jsonString == null) return null;
 
       final List<dynamic> decodedList = jsonDecode(jsonString);
-      return decodedList.map((e) => e as Map<String, dynamic>).toList();
+      return decodedList
+          .where((e) => e != null && e is Map)
+          .map((e) => Map<String, dynamic>.from(e as Map))
+          .toList();
     } catch (e) {
       print('LocalCacheService: Error reading cached data for key "$key": $e');
       return null;

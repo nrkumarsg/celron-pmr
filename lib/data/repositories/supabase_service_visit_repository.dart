@@ -19,10 +19,17 @@ class SupabaseServiceVisitRepository implements ServiceVisitRepository {
   Stream<List<ServiceVisit>> getVisitsStream(String siteId) async* {
     final cacheKey = _getCacheKey(siteId);
     
-    // 1. Local Cache
-    final cachedData = await _localCache.getCachedListData(cacheKey);
-    if (cachedData != null) {
-      yield cachedData.map((map) => ServiceVisit.fromMap(map)).toList();
+    try {
+      // 1. Local Cache
+      final cachedData = await _localCache.getCachedListData(cacheKey);
+      if (cachedData != null) {
+        yield cachedData
+            .where((e) => e != null)
+            .map((map) => ServiceVisit.fromMap(Map<String, dynamic>.from(map)))
+            .toList();
+      }
+    } catch (e) {
+      print('SupabaseServiceVisitRepository: Error loading cache: $e');
     }
 
     // 2. Remote Stream
@@ -32,8 +39,20 @@ class SupabaseServiceVisitRepository implements ServiceVisitRepository {
         .eq('site_id', siteId)
         .order('visit_date', ascending: false)
         .map((data) {
-          _localCache.cacheListData(cacheKey, data);
-          return data.map((map) => ServiceVisit.fromMap(map)).toList();
+          try {
+            // Client-side filtering as a safeguard for site isolation
+            final filtered = data
+                .where((e) => e != null && (e['site_id']?.toString() == siteId || e['siteId']?.toString() == siteId))
+                .toList();
+
+            _localCache.cacheListData(cacheKey, filtered);
+            return filtered
+                .map((map) => ServiceVisit.fromMap(Map<String, dynamic>.from(map)))
+                .toList();
+          } catch (e) {
+            print('SupabaseServiceVisitRepository: Error mapping stream data: $e');
+            return [];
+          }
         });
   }
 
@@ -48,14 +67,21 @@ class SupabaseServiceVisitRepository implements ServiceVisitRepository {
           .order('visit_date', ascending: false);
           
       final data = response as List;
-      final listToCache = data.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+      final listToCache = data
+          .where((e) => e != null)
+          .map((e) => Map<String, dynamic>.from(e as Map))
+          .toList();
       await _localCache.cacheListData(cacheKey, listToCache);
       
-      return data.map((map) => ServiceVisit.fromMap(map as Map<String, dynamic>)).toList();
+      return listToCache.map((map) => ServiceVisit.fromMap(map)).toList();
     } catch (e) {
+      print('Network error fetching visits, falling back to cache: $e');
       final cachedData = await _localCache.getCachedListData(cacheKey);
       if (cachedData != null) {
-        return cachedData.map((map) => ServiceVisit.fromMap(map)).toList();
+        return cachedData
+            .where((e) => e != null)
+            .map((map) => ServiceVisit.fromMap(Map<String, dynamic>.from(map)))
+            .toList();
       }
       return [];
     }

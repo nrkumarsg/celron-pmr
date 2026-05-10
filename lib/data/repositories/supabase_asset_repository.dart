@@ -19,10 +19,17 @@ class SupabaseAssetRepository implements AssetRepository {
   Stream<List<Asset>> getAssetsStream(String siteId) async* {
     final cacheKey = _getCacheKey(siteId);
     
-    // 1. Yield local cache first
-    final cachedData = await _localCache.getCachedListData(cacheKey);
-    if (cachedData != null) {
-      yield cachedData.map((map) => Asset.fromMap(map)).toList();
+    try {
+      // 1. Yield local cache first
+      final cachedData = await _localCache.getCachedListData(cacheKey);
+      if (cachedData != null) {
+        yield cachedData
+            .where((e) => e != null)
+            .map((map) => Asset.fromMap(Map<String, dynamic>.from(map)))
+            .toList();
+      }
+    } catch (e) {
+      print('SupabaseAssetRepository: Error loading cache: $e');
     }
 
     // 2. Yield remote stream and update cache
@@ -32,8 +39,21 @@ class SupabaseAssetRepository implements AssetRepository {
         .eq('site_id', siteId)
         .order('name')
         .map((data) {
-          _localCache.cacheListData(cacheKey, data);
-          return data.map((map) => Asset.fromMap(map)).toList();
+          try {
+            // Client-side filtering as a safeguard for site isolation
+            final filtered = data
+                .where((e) => e != null && (e['site_id']?.toString() == siteId || e['siteId']?.toString() == siteId))
+                .map((e) => Map<String, dynamic>.from(e as Map))
+                .toList();
+
+            _localCache.cacheListData(cacheKey, filtered);
+            return filtered
+                .map((map) => Asset.fromMap(map))
+                .toList();
+          } catch (e) {
+            print('SupabaseAssetRepository: Error mapping stream data: $e');
+            return [];
+          }
         });
   }
 
@@ -48,15 +68,21 @@ class SupabaseAssetRepository implements AssetRepository {
           .order('name');
           
       final data = response as List;
-      final listToCache = data.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+      final listToCache = data
+          .where((e) => e != null)
+          .map((e) => Map<String, dynamic>.from(e as Map))
+          .toList();
       await _localCache.cacheListData(cacheKey, listToCache);
       
-      return data.map((map) => Asset.fromMap(map as Map<String, dynamic>)).toList();
+      return listToCache.map((map) => Asset.fromMap(map)).toList();
     } catch (e) {
       print('Network error fetching assets, falling back to cache: $e');
       final cachedData = await _localCache.getCachedListData(cacheKey);
       if (cachedData != null) {
-        return cachedData.map((map) => Asset.fromMap(map)).toList();
+        return cachedData
+            .where((e) => e != null)
+            .map((map) => Asset.fromMap(Map<String, dynamic>.from(map)))
+            .toList();
       }
       return [];
     }

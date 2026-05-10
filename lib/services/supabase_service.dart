@@ -38,7 +38,7 @@ class SupabaseService {
     // Convert to snake_case for Supabase
     final supabaseMap = {
       'id': map['id'],
-      'site_id': map['siteId'],
+      'site_id': map['site_id'],
       'name': map['name'],
       'reference': map['reference'],
       'model': map['model'],

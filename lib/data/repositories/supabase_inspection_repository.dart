@@ -20,10 +20,17 @@ class SupabaseInspectionRepository implements InspectionRepository {
   Stream<List<Inspection>> getInspectionsStream(String assetId) async* {
     final cacheKey = _getCacheKey(assetId);
     
-    // 1. Yield local cache first
-    final cachedData = await _localCache.getCachedListData(cacheKey);
-    if (cachedData != null) {
-      yield cachedData.map((map) => Inspection.fromMap(map, map['id'] ?? '')).toList();
+    try {
+      // 1. Yield local cache first
+      final cachedData = await _localCache.getCachedListData(cacheKey);
+      if (cachedData != null) {
+        yield cachedData
+            .where((e) => e != null)
+            .map((map) => Inspection.fromMap(Map<String, dynamic>.from(map), map['id'] ?? ''))
+            .toList();
+      }
+    } catch (e) {
+      print('SupabaseInspectionRepository: Error loading cache: $e');
     }
 
     // 2. Yield remote stream and update cache
@@ -33,8 +40,21 @@ class SupabaseInspectionRepository implements InspectionRepository {
         .eq('asset_id', assetId)
         .order('date', ascending: false)
         .map((data) {
-          _localCache.cacheListData(cacheKey, data);
-          return data.map((map) => Inspection.fromMap(map, map['id'])).toList();
+          try {
+            // Client-side filtering as a safeguard for asset isolation
+            final filtered = data
+                .where((e) => e != null && (e['asset_id']?.toString() == assetId || e['assetId']?.toString() == assetId))
+                .map((e) => Map<String, dynamic>.from(e as Map))
+                .toList();
+
+            _localCache.cacheListData(cacheKey, filtered);
+            return filtered
+                .map((map) => Inspection.fromMap(map, map['id'] ?? ''))
+                .toList();
+          } catch (e) {
+            print('SupabaseInspectionRepository: Error mapping stream data: $e');
+            return [];
+          }
         });
   }
 
@@ -50,13 +70,13 @@ class SupabaseInspectionRepository implements InspectionRepository {
           .maybeSingle();
       
       if (response == null) return null;
-      return Inspection.fromMap(response, response['id']);
+      return Inspection.fromMap(response, response['id'] ?? '');
     } catch (e) {
       // Offline fallback: try to get the latest from cache
       final cachedData = await _localCache.getCachedListData(_getCacheKey(assetId));
       if (cachedData != null && cachedData.isNotEmpty) {
-        // Since stream sorts descending, the first one is the latest
-        return Inspection.fromMap(cachedData.first, cachedData.first['id']);
+        final first = cachedData.first;
+        return Inspection.fromMap(Map<String, dynamic>.from(first), first['id'] ?? '');
       }
       return null;
     }
@@ -67,7 +87,10 @@ class SupabaseInspectionRepository implements InspectionRepository {
     final cacheKey = _getSiteCacheKey(siteId);
     try {
       final assetsResponse = await _client.from('assets').select('id').eq('site_id', siteId);
-      final assetIds = (assetsResponse as List).map((a) => a['id'] as String).toList();
+      final assetIds = (assetsResponse as List)
+          .where((e) => e != null)
+          .map((a) => a['id'] as String)
+          .toList();
       
       if (assetIds.isEmpty) return [];
 
@@ -78,14 +101,22 @@ class SupabaseInspectionRepository implements InspectionRepository {
           .order('date', ascending: false);
           
       final data = response as List;
-      final listToCache = data.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+      final listToCache = data
+          .where((e) => e != null)
+          .map((e) => Map<String, dynamic>.from(e as Map))
+          .toList();
       await _localCache.cacheListData(cacheKey, listToCache);
       
-      return data.map((map) => Inspection.fromMap(map as Map<String, dynamic>, map['id'])).toList();
+      return listToCache
+          .map((map) => Inspection.fromMap(map, map['id'] ?? ''))
+          .toList();
     } catch (e) {
        final cachedData = await _localCache.getCachedListData(cacheKey);
        if (cachedData != null) {
-          return cachedData.map((map) => Inspection.fromMap(map, map['id'])).toList();
+          return cachedData
+              .where((e) => e != null)
+              .map((map) => Inspection.fromMap(Map<String, dynamic>.from(map), map['id'] ?? ''))
+              .toList();
        }
        return [];
     }
@@ -99,7 +130,11 @@ class SupabaseInspectionRepository implements InspectionRepository {
         .eq('visit_id', visitId)
         .order('date', ascending: false)
         .map((data) {
-          return data.map((map) => Inspection.fromMap(map, map['id'])).toList();
+          // Client-side filtering as a safeguard for visit isolation
+          return data
+              .where((e) => e != null && (e['visit_id']?.toString() == visitId || e['visitId']?.toString() == visitId))
+              .map((map) => Inspection.fromMap(Map<String, dynamic>.from(map), map['id']))
+              .toList();
         });
   }
 

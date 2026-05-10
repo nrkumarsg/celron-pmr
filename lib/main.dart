@@ -12,21 +12,21 @@ import 'injection_container.dart' as di;
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
-  // Load environment variables
-  await dotenv.load(fileName: ".env");
+  // Initialize Supabase with hardcoded credentials for local deployment stability
+  const String supabaseUrl = 'https://dfoihdzpgkrtyerzzchm.supabase.co';
+  const String supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRmb2loZHpwZ2tydHllcnp6Y2htIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE1NzMxMTgsImV4cCI6MjA4NzE0OTExOH0.9FGN21KeUpS0UyyFJJ1YjXLElL4AF6ym_hKAJsr_ek4';
 
-  // Initialize Supabase
-  // Initialize Supabase with credentials from .env
-  final supabaseUrl = dotenv.env['VITE_SUPABASE_URL'] ?? '';
-  final supabaseKey = dotenv.env['VITE_SUPABASE_ANON_KEY'] ?? '';
-
-  assert(supabaseUrl.isNotEmpty, 'VITE_SUPABASE_URL is missing from .env');
-  assert(supabaseKey.isNotEmpty, 'VITE_SUPABASE_ANON_KEY is missing from .env');
-
-  await Supabase.initialize(
-    url: supabaseUrl,
-    anonKey: supabaseKey,
-  );
+  print('Starting Supabase Initialization...');
+  try {
+    await Supabase.initialize(
+      url: supabaseUrl,
+      anonKey: supabaseKey,
+      debug: true,
+    );
+    print('Supabase Initialized successfully.');
+  } catch (e) {
+    print('CRITICAL: Supabase Initialization Failed: $e');
+  }
 
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,

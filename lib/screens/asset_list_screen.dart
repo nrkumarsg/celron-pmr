@@ -16,6 +16,7 @@ import '../services/pdf_service.dart';
 import 'inspection_form_screen.dart';
 import 'edit_asset_screen.dart';
 import 'asset_detail_screen.dart';
+import '../services/ai_service.dart';
 
 class AssetListScreen extends StatefulWidget {
   final Site site;
@@ -38,6 +39,7 @@ class AssetListScreen extends StatefulWidget {
 class _AssetListScreenState extends State<AssetListScreen> {
   final AssetRepository _assetRepo = GetIt.instance<AssetRepository>();
   final InspectionRepository _inspectionRepo = GetIt.instance<InspectionRepository>();
+  final AIService _aiService = GetIt.instance<AIService>();
 
   Future<void> _importAssets() async {
     try {
@@ -313,6 +315,7 @@ class _AssetListScreenState extends State<AssetListScreen> {
                   _rowButton(Icons.content_copy, 'Duplicate', Colors.teal, () => _duplicateAsset(asset)),
                   _rowButton(Icons.visibility, 'View', Colors.orange, () => Navigator.push(context, MaterialPageRoute(builder: (context) => AssetDetailScreen(asset: asset, site: widget.site, company: widget.company)))),
                   _rowButton(Icons.print, 'Print', Colors.indigo, () => _printSingle(asset)),
+                  _rowButton(Icons.auto_awesome, 'AI (V2)', Colors.deepPurple, () => _printSingleAI(asset)),
                   _rowButton(Icons.download, 'Download', Colors.green, () => _downloadSingle(asset)),
                 ],
               ),
@@ -629,6 +632,27 @@ class _AssetListScreenState extends State<AssetListScreen> {
       return;
     }
     final bytes = await PdfService.generateInspectionPdf(company: widget.company, site: widget.site, asset: asset, inspection: inspection);
+    await Printing.layoutPdf(onLayout: (format) async => bytes);
+  }
+
+  Future<void> _printSingleAI(Asset asset) async {
+    final inspection = await _inspectionRepo.getLatestInspection(asset.id);
+    if (inspection == null) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('No inspection data found.')));
+      return;
+    }
+    
+    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Generating AI Diagnostic Assessment (V2)...')));
+    
+    final aiAnalysis = await _aiService.analyzeInspection(asset, inspection);
+    
+    final bytes = await PdfService.generateAIInspectionPdf(
+      company: widget.company, 
+      site: widget.site, 
+      asset: asset, 
+      inspection: inspection,
+      aiAnalysis: aiAnalysis,
+    );
     await Printing.layoutPdf(onLayout: (format) async => bytes);
   }
 

@@ -6,7 +6,7 @@ class CelRonCompany {
   static const Company instance = Company(
     id: 'celron',
     name: 'CEL-RON ENTERPRISES PTE LTD',
-    regOffice: '14, Robinson Road, #08-01A, Far East Finance Building, Singapore 048545',
+    regOffice: '10 Jln Besar,#03-05, Sim Lim Tower, Singapore 208787',
     phone: '+65 66181721',
     fax: '+65 63334636',
     mobile: '+65 97685891',

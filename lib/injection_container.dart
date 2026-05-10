@@ -9,12 +9,13 @@ import 'data/repositories/supabase_inspection_repository.dart';
 import 'domain/repositories/service_visit_repository.dart';
 import 'data/repositories/supabase_service_visit_repository.dart';
 import 'data/datasources/local_cache_service.dart';
+import 'services/ai_service.dart';
 
 final sl = GetIt.instance; // sl = Service Locator
 
 Future<void> init() async {
   // --- External Dependencies ---
-  sl.registerLazySingleton(() => Supabase.instance.client);
+  sl.registerSingleton<SupabaseClient>(Supabase.instance.client);
 
   // --- Core / Data Sources ---
   sl.registerLazySingleton(() => LocalCacheService());
@@ -43,6 +44,9 @@ Future<void> init() async {
             client: sl(),
             localCache: sl(),
           ));
+
+  // --- Services ---
+  sl.registerLazySingleton(() => AIService());
 
   // --- Use Cases / BLoCs / Providers ---
   // e.g. sl.registerFactory(() => SiteProvider(repository: sl()));
