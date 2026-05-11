@@ -236,6 +236,20 @@ class _InspectionFormScreenState extends State<InspectionFormScreen> {
         _velocityStatus = 'FAULTY';
         _overallStatus = 'FAULTY';
         _maintenanceAdvice = 'Machine is marked as FAULTY. Inspection could not be completed.';
+        
+        // Reset all parameters to N/A and empty remarks
+        _motorParams.forEach((key, value) {
+          value['status'] = 'N/A';
+          value['remark'] = '';
+        });
+        _pumpParams.forEach((key, value) {
+          value['status'] = 'N/A';
+          value['remark'] = '';
+        });
+        _pipeParams.forEach((key, value) {
+          value['status'] = 'N/A';
+          value['remark'] = '';
+        });
       });
       return;
     }
@@ -868,6 +882,7 @@ class _InspectionFormScreenState extends State<InspectionFormScreen> {
           ),
           const SizedBox(height: 4),
           TextFormField(
+            key: ValueKey('$label$_isFaulty'), // Force rebuild to clear text when status changes
             initialValue: data['remark'],
             decoration: const InputDecoration(
               hintText: 'Reading / Remark',
