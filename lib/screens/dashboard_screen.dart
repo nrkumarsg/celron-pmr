@@ -77,6 +77,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
         backgroundColor: const Color(0xFF003366),
         foregroundColor: Colors.white,
         actions: [
+          StreamBuilder<List<Site>>(
+            stream: _siteRepository.getSitesStream(),
+            builder: (context, snapshot) {
+              final sites = snapshot.data ?? [];
+              return IconButton(
+                icon: const Icon(Icons.add_business),
+                tooltip: 'Add New Partner / Site',
+                onPressed: () => _showAddSiteDialog(context, sites),
+              );
+            }
+          ),
           IconButton(
             icon: const Icon(Icons.lightbulb_outline),
             onPressed: () => Navigator.pushNamed(context, '/knowledge'),
@@ -274,19 +285,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ],
         ),
       ),
-      floatingActionButton: StreamBuilder<List<Site>>(
-        stream: _siteRepository.getSitesStream(),
-        builder: (context, snapshot) {
-          final sites = snapshot.data ?? [];
-          return FloatingActionButton.extended(
-            onPressed: () => _showAddSiteDialog(context, sites),
-            label: const Text('Add New Partner / Site'),
-            icon: const Icon(Icons.add_business),
-            backgroundColor: const Color(0xFF003366),
-            foregroundColor: Colors.white,
-          );
-        },
-      ),
+
     );
   }
 }

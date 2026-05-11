@@ -139,6 +139,26 @@ class SupabaseInspectionRepository implements InspectionRepository {
   }
 
   @override
+  Future<List<Inspection>> getInspectionsByVisitAsync(String visitId) async {
+    try {
+      final response = await _client
+          .from('inspections')
+          .select()
+          .eq('visit_id', visitId)
+          .order('date', ascending: false);
+          
+      final data = response as List;
+      return data
+          .where((e) => e != null)
+          .map((map) => Inspection.fromMap(Map<String, dynamic>.from(map), map['id']))
+          .toList();
+    } catch (e) {
+      print('SupabaseInspectionRepository: Error fetching inspections by visit: $e');
+      return [];
+    }
+  }
+
+  @override
   Future<void> saveInspection(Inspection inspection) async {
     await _client.from('inspections').upsert(inspection.toMap());
   }

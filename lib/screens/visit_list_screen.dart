@@ -3,8 +3,10 @@ import 'package:intl/intl.dart';
 import '../models/site.dart';
 import '../models/company.dart';
 import '../models/service_visit.dart';
+import '../domain/repositories/inspection_repository.dart';
 import '../domain/repositories/service_visit_repository.dart';
 import '../injection_container.dart';
+import '../models/inspection.dart';
 import 'asset_list_screen.dart';
 import 'visit_detail_screen.dart';
 
@@ -20,6 +22,7 @@ class VisitListScreen extends StatefulWidget {
 
 class _VisitListScreenState extends State<VisitListScreen> {
   final _visitRepo = sl<ServiceVisitRepository>();
+  final _inspectionRepo = sl<InspectionRepository>();
 
   @override
   Widget build(BuildContext context) {
@@ -28,6 +31,14 @@ class _VisitListScreenState extends State<VisitListScreen> {
         title: Text('${widget.site.name} - Maintenance History'),
         backgroundColor: const Color(0xFF003366),
         foregroundColor: Colors.white,
+        actions: [
+          IconButton(
+            tooltip: 'Start New Inspection Services',
+            icon: const Icon(Icons.add_task),
+            onPressed: () => _showAddVisitDialog(),
+          ),
+          const SizedBox(width: 8),
+        ],
       ),
       body: Column(
         children: [
@@ -56,13 +67,7 @@ class _VisitListScreenState extends State<VisitListScreen> {
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _showAddVisitDialog(),
-        label: const Text('Start New Inspection Services'),
-        icon: const Icon(Icons.add_task),
-        backgroundColor: const Color(0xFFC0392B),
-        foregroundColor: Colors.white,
-      ),
+
     );
   }
 
@@ -356,25 +361,70 @@ class _VisitListScreenState extends State<VisitListScreen> {
   }
 
   void _duplicateVisit(ServiceVisit visit) async {
-    final newRef = '${visit.celronRef}-COPY';
-    final newVisit = ServiceVisit(
-      id: DateTime.now().millisecondsSinceEpoch.toString(),
-      siteId: visit.siteId,
-      celronRef: newRef,
-      customerRef: visit.customerRef,
-      visitDate: DateTime.now(),
-      notes: visit.notes,
-      jobType: visit.jobType,
-      contractEnds: visit.contractEnds,
-      createdAt: DateTime.now(),
-      status: 'OPEN',
+    // Show a loading indicator since this might take a moment if there are many inspections
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(child: CircularProgressIndicator()),
     );
 
-    await _visitRepo.saveVisit(newVisit);
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Job Duplicated: $newRef')),
+    try {
+      final newRef = '${visit.celronRef}-COPY';
+      final newVisitId = DateTime.now().millisecondsSinceEpoch.toString();
+      
+      final newVisit = ServiceVisit(
+        id: newVisitId,
+        siteId: visit.siteId,
+        celronRef: newRef,
+        customerRef: visit.customerRef,
+        visitDate: DateTime.now(),
+        notes: visit.notes,
+        jobType: visit.jobType,
+        contractEnds: visit.contractEnds,
+        createdAt: DateTime.now(),
+        status: 'OPEN',
       );
+
+      // 1. Save the new visit
+      await _visitRepo.saveVisit(newVisit);
+
+      // 2. Fetch all inspections from the source visit
+      final oldInspections = await _inspectionRepo.getInspectionsByVisitAsync(visit.id);
+
+      // 3. Create copies of all inspections for the new visit
+      for (final oldInsp in oldInspections) {
+        final newInsp = Inspection(
+          id: DateTime.now().millisecondsSinceEpoch.toString() + oldInsp.assetId.substring(0, 3), // Unique ID
+          assetId: oldInsp.assetId,
+          date: DateTime.now(),
+          vibrationG: oldInsp.vibrationG,
+          temperatureC: oldInsp.temperatureC,
+          motorParameters: Map<String, dynamic>.from(oldInsp.motorParameters),
+          pumpParameters: Map<String, dynamic>.from(oldInsp.pumpParameters),
+          pipeParameters: Map<String, dynamic>.from(oldInsp.pipeParameters),
+          otherParameters: Map<String, dynamic>.from(oldInsp.otherParameters),
+          overallStatus: oldInsp.overallStatus,
+          visitId: newVisitId, // Link to the new visit
+          aiConclusion: oldInsp.aiConclusion,
+        );
+        await _inspectionRepo.saveInspection(newInsp);
+        // Small delay to ensure unique IDs if timestamp is used
+        await Future.delayed(const Duration(milliseconds: 1));
+      }
+
+      if (mounted) {
+        Navigator.pop(context); // Close loading indicator
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Job Duplicated with ${oldInspections.length} inspections!')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error duplicating job: $e'), backgroundColor: Colors.red),
+        );
+      }
     }
   }
 

@@ -32,6 +32,12 @@ The "AI Industrial Scan" uses Google Gemini Vision to provide expert-level diagn
 | **GRAPH** | Signal Analysis | Screenshots of WitMotion vibration trends. Extracts data and analyzes waveforms for harmonics. |
 | **ELECTRICAL**| Load Audit | Photos of Amperage readings or Power Analyzers. Detects Ampere Surges and Phase Imbalance (Sludge detection). |
 
+### 3.1 AI Conclusion & Verdict Engine
+The **"Final AI Summary & Verdict"** feature provides a synthesized technical paragraph based on the entire inspection profile.
+*   **Expert Persona**: Each result is prepared by a virtual **"Senior Preventive Maintenance Engineer"** specialized in **API 610/ISO 10816** standards.
+*   **Data Synthesis**: The engine correlates Vibration (g & velocity), Thermal data, Electrical Load (Amperes), and Mechanical integrity (Leaks, Fasteners, Bolts/Nuts).
+*   **Professional Output**: Generates a technical 50-100 word verdict that is automatically embedded into the final PDF certificate for professional client presentation.
+
 ---
 
 ## 4. Understanding Machine Health Badges

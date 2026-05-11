@@ -5,6 +5,7 @@
   "scripts": {
     "start": "serve -s public",
     "dev": "flutter run -d chrome",
+    "vercel-build": "rm -rf flutter && git clone https://github.com/flutter/flutter.git -b stable --depth 1 && ./flutter/bin/flutter build web --release --dart-define=GROQ_API_KEY=$GROQ_API_KEY",
     "build": "flutter build web --release"
   },
   "dependencies": {

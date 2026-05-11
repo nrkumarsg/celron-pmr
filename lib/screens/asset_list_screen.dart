@@ -174,6 +174,11 @@ class _AssetListScreenState extends State<AssetListScreen> {
         foregroundColor: Colors.white,
         actions: [
           IconButton(
+            icon: const Icon(Icons.add),
+            tooltip: 'Add Asset',
+            onPressed: () => _showAddAssetDialog(),
+          ),
+          IconButton(
             icon: const Icon(Icons.help_outline),
             onPressed: () => _showImportInstructions(),
           ),
@@ -220,13 +225,7 @@ class _AssetListScreenState extends State<AssetListScreen> {
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _showAddAssetDialog(),
-        label: const Text('Add Asset'),
-        icon: const Icon(Icons.add),
-        backgroundColor: const Color(0xFF003366),
-        foregroundColor: Colors.white,
-      ),
+
     );
   }
 

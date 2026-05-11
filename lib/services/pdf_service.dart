@@ -1,6 +1,7 @@
 import 'package:flutter/services.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
+import 'package:printing/printing.dart';
 import 'package:intl/intl.dart';
 import '../models/company.dart';
 import '../models/site.dart';
@@ -30,7 +31,14 @@ class PdfService {
     required Asset asset,
     required Inspection inspection,
   }) async {
-    final pdf = pw.Document();
+    final font = await PdfGoogleFonts.robotoRegular();
+    final fontBold = await PdfGoogleFonts.robotoBold();
+    final pdf = pw.Document(
+      theme: pw.ThemeData.withFont(
+        base: font,
+        bold: fontBold,
+      ),
+    );
     final logoImage = await _loadImage('assets/celronlogo.jpg');
     final isoLogo = await _loadImage('assets/iso_logo.png');
     final bizsafeLogo = await _loadImage('assets/bizsafe_logo.png');
@@ -51,6 +59,10 @@ class PdfService {
             _buildParameterTable('PUMP PARAMETERS', inspection.pumpParameters),
             pw.SizedBox(height: 10),
             _buildParameterTable('PIPES AND OTHERS', inspection.pipeParameters),
+            if (inspection.aiConclusion != null && inspection.aiConclusion!.isNotEmpty) ...[
+              pw.SizedBox(height: 16),
+              _buildFinalVerdict(inspection.aiConclusion!),
+            ],
             pw.SizedBox(height: 30),
             _buildSignatures(site, signatureImage: signatureImage),
           ];
@@ -68,7 +80,14 @@ class PdfService {
     required Inspection inspection,
     required String aiAnalysis,
   }) async {
-    final pdf = pw.Document();
+    final font = await PdfGoogleFonts.robotoRegular();
+    final fontBold = await PdfGoogleFonts.robotoBold();
+    final pdf = pw.Document(
+      theme: pw.ThemeData.withFont(
+        base: font,
+        bold: fontBold,
+      ),
+    );
     final logoImage = await _loadImage('assets/celronlogo.jpg');
     final isoLogo = await _loadImage('assets/iso_logo.png');
     final bizsafeLogo = await _loadImage('assets/bizsafe_logo.png');
@@ -104,7 +123,14 @@ class PdfService {
     required Site site,
     required List<Map<String, dynamic>> assetData,
   }) async {
-    final pdf = pw.Document();
+    final font = await PdfGoogleFonts.robotoRegular();
+    final fontBold = await PdfGoogleFonts.robotoBold();
+    final pdf = pw.Document(
+      theme: pw.ThemeData.withFont(
+        base: font,
+        bold: fontBold,
+      ),
+    );
     final logoImage = await _loadImage('assets/celronlogo.jpg');
     final isoLogo = await _loadImage('assets/iso_logo.png');
     final bizsafeLogo = await _loadImage('assets/bizsafe_logo.png');
@@ -137,6 +163,10 @@ class PdfService {
             _buildParameterTable('PUMP PARAMETERS', inspection.pumpParameters),
             pw.SizedBox(height: 10),
             _buildParameterTable('PIPES AND OTHERS', inspection.pipeParameters),
+            if (inspection.aiConclusion != null && inspection.aiConclusion!.isNotEmpty) ...[
+              pw.SizedBox(height: 16),
+              _buildFinalVerdict(inspection.aiConclusion!),
+            ],
             pw.SizedBox(height: 30),
             _buildSignatures(site, signatureImage: signatureImage),
           ],
@@ -151,7 +181,14 @@ class PdfService {
     required Site site,
     required List<Map<String, dynamic>> assetData,
   }) async {
-    final pdf = pw.Document();
+    final font = await PdfGoogleFonts.robotoRegular();
+    final fontBold = await PdfGoogleFonts.robotoBold();
+    final pdf = pw.Document(
+      theme: pw.ThemeData.withFont(
+        base: font,
+        bold: fontBold,
+      ),
+    );
     final logoImage = await _loadImage('assets/celronlogo.jpg');
     final isoLogo = await _loadImage('assets/iso_logo.png');
     final bizsafeLogo = await _loadImage('assets/bizsafe_logo.png');
@@ -241,7 +278,14 @@ class PdfService {
     required String ourRef,
     required String jobDescription,
   }) async {
-    final pdf = pw.Document();
+    final font = await PdfGoogleFonts.robotoRegular();
+    final fontBold = await PdfGoogleFonts.robotoBold();
+    final pdf = pw.Document(
+      theme: pw.ThemeData.withFont(
+        base: font,
+        bold: fontBold,
+      ),
+    );
     final logoImage = await _loadImage('assets/celronlogo.jpg');
     final isoLogo = await _loadImage('assets/iso_logo.png');
     final bizsafeLogo = await _loadImage('assets/bizsafe_logo.png');
@@ -295,6 +339,10 @@ class PdfService {
             _buildParameterTable('PUMP PARAMETERS', inspection.pumpParameters),
             pw.SizedBox(height: 10),
             _buildParameterTable('PIPES AND OTHERS', inspection.pipeParameters),
+            if (inspection.aiConclusion != null && inspection.aiConclusion!.isNotEmpty) ...[
+              pw.SizedBox(height: 16),
+              _buildFinalVerdict(inspection.aiConclusion!),
+            ],
             pw.SizedBox(height: 30),
             _buildSignatures(site, signatureImage: signatureImage),
           ],
@@ -344,62 +392,67 @@ class PdfService {
                         ),
                       ),
               ),
-              if (isoLogo != null)
-                pw.Container(
-                  width: 45,
-                  height: 45,
-                  margin: const pw.EdgeInsets.only(left: 10),
-                  child: pw.Image(isoLogo, fit: pw.BoxFit.contain),
-                ),
-              if (bizsafeLogo != null)
-                pw.Container(
-                  width: 45,
-                  height: 45,
-                  margin: const pw.EdgeInsets.only(left: 10),
-                  child: pw.Image(bizsafeLogo, fit: pw.BoxFit.contain),
-                ),
-              // Company Name - Right Aligned
+              // Company Name - Center Aligned
               pw.Expanded(
-                child: pw.Align(
-                  alignment: pw.Alignment.centerRight,
-                  child: pw.Column(
-                    crossAxisAlignment: pw.CrossAxisAlignment.end,
-                    children: [
-                      pw.Text(
-                        'CEL-RON ENTERPRISES PTE LTD',
-                        style: pw.TextStyle(
-                          color: PdfColors.white,
-                          fontWeight: pw.FontWeight.bold,
-                          fontSize: 13,
-                          letterSpacing: 1,
-                        ),
+                child: pw.Column(
+                  crossAxisAlignment: pw.CrossAxisAlignment.center,
+                  mainAxisAlignment: pw.MainAxisAlignment.center,
+                  children: [
+                    pw.Text(
+                      'CEL-RON ENTERPRISES PTE LTD',
+                      style: pw.TextStyle(
+                        color: PdfColors.white,
+                        fontWeight: pw.FontWeight.bold,
+                        fontSize: 14,
+                        letterSpacing: 1,
                       ),
-                      pw.Text(
-                        'UEN: ${company.brn}  |  GST: ${company.gstReg}',
-                        style: const pw.TextStyle(color: PdfColors.white, fontSize: 7),
-                      ),
-                    ],
-                  ),
+                    ),
+                    pw.SizedBox(height: 2),
+                    pw.Text(
+                      'UEN: ${company.brn}  |  GST: ${company.gstReg}',
+                      style: const pw.TextStyle(color: PdfColors.white, fontSize: 8),
+                    ),
+                  ],
                 ),
+              ),
+              // ISO and bizSAFE Logos - Right Aligned
+              pw.Row(
+                mainAxisSize: pw.MainAxisSize.min,
+                children: [
+                  if (isoLogo != null)
+                    pw.Container(
+                      width: 45,
+                      height: 45,
+                      child: pw.Image(isoLogo, fit: pw.BoxFit.contain),
+                    ),
+                  if (bizsafeLogo != null)
+                    pw.Container(
+                      width: 45,
+                      height: 45,
+                      margin: const pw.EdgeInsets.only(left: 10),
+                      child: pw.Image(bizsafeLogo, fit: pw.BoxFit.contain),
+                    ),
+                ],
               ),
             ],
           ),
         ),
 
-        // ── Address Sub-band (Right Aligned) ─────────────────────────────────────────────────
+        // ── Address Sub-band (Center Aligned) ─────────────────────────────────────────────────
         pw.Container(
           width: double.infinity,
           color: const PdfColor.fromInt(0xFF004080),
           padding: const pw.EdgeInsets.symmetric(horizontal: 12, vertical: 3),
           child: pw.Column(
-            crossAxisAlignment: pw.CrossAxisAlignment.end,
+            crossAxisAlignment: pw.CrossAxisAlignment.center,
             children: [
               pw.Text(
                 company.regOffice,
                 style: const pw.TextStyle(color: PdfColors.white, fontSize: 7),
               ),
+              pw.SizedBox(height: 1),
               pw.Row(
-                mainAxisAlignment: pw.MainAxisAlignment.end,
+                mainAxisAlignment: pw.MainAxisAlignment.center,
                 children: [
                   pw.Text('Tel: ${company.phone}', style: const pw.TextStyle(color: PdfColors.white, fontSize: 7)),
                   pw.SizedBox(width: 12),
@@ -473,10 +526,31 @@ class PdfService {
     );
   }
 
+  static pw.Widget _buildFinalVerdict(String verdict) {
+    return pw.Column(
+      crossAxisAlignment: pw.CrossAxisAlignment.start,
+      children: [
+        _sectionHeader('FINAL AI SUMMARY & VERDICT'),
+        pw.Container(
+          width: double.infinity,
+          padding: const pw.EdgeInsets.all(10),
+          decoration: pw.BoxDecoration(
+            border: pw.Border.all(color: _primaryBlue, width: 0.5),
+            color: const PdfColor.fromInt(0xFFF0F7FF),
+          ),
+          child: pw.Text(
+            verdict,
+            style: const pw.TextStyle(fontSize: 8.5, color: _charcoal, fontStyle: pw.FontStyle.italic),
+          ),
+        ),
+      ],
+    );
+  }
+
   static pw.Widget _buildProjectInfo(Site site, Asset asset, Inspection inspection) {
     String frequency = (asset.hz != 0) ? (asset.rpm / asset.hz).toStringAsFixed(2) : 'N/A';
     
-    final statusColor = inspection.overallStatus == 'CRITICAL'
+    final statusColor = (inspection.overallStatus == 'CRITICAL' || inspection.overallStatus == 'FAULTY')
         ? _safetyRed
         : inspection.overallStatus == 'MARGINAL'
             ? const PdfColor.fromInt(0xFFE65C00)
@@ -593,7 +667,7 @@ class PdfService {
             ...params.entries.map((e) {
               final statusVal = e.value['status'] as String? ?? '';
               final isOk = statusVal == 'OK';
-              final isNotOk = statusVal == 'NOT OK';
+              final isNotOk = statusVal == 'NOT OK' || statusVal == 'FAULTY';
               final statusColor = isOk
                   ? const PdfColor.fromInt(0xFF1A7A1A)
                   : isNotOk
@@ -609,7 +683,7 @@ class PdfService {
                       style: pw.TextStyle(fontSize: 8, fontWeight: pw.FontWeight.bold, color: statusColor),
                     ),
                   ),
-                  pw.Padding(padding: const pw.EdgeInsets.all(5), child: pw.Text((e.value['remark'] as String? ?? '').replaceAll('Ω', 'Ohm'), style: const pw.TextStyle(fontSize: 8, color: _charcoal))),
+                  pw.Padding(padding: const pw.EdgeInsets.all(5), child: pw.Text(e.value['remark'] as String? ?? '', style: const pw.TextStyle(fontSize: 8, color: _charcoal))),
                 ],
               );
             }),
@@ -683,7 +757,7 @@ class PdfService {
             ...List.generate(reports.length, (i) {
               final asset = reports[i]['asset'] as Asset;
               final inspection = reports[i]['inspection'] as Inspection;
-              final statusColor = inspection.overallStatus == 'CRITICAL'
+              final statusColor = (inspection.overallStatus == 'CRITICAL' || inspection.overallStatus == 'FAULTY')
                   ? _safetyRed
                   : inspection.overallStatus == 'MARGINAL'
                       ? const PdfColor.fromInt(0xFFE65C00)

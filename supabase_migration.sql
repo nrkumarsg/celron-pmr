@@ -63,7 +63,8 @@ CREATE TABLE IF NOT EXISTS public.inspections (
   pump_parameters   JSONB NOT NULL DEFAULT '{}',
   pipe_parameters   JSONB NOT NULL DEFAULT '{}',
   other_parameters  JSONB NOT NULL DEFAULT '{}',
-  overall_status    TEXT NOT NULL DEFAULT 'NORMAL'
+  overall_status    TEXT NOT NULL DEFAULT 'NORMAL',
+  ai_conclusion     TEXT
 );
 
 ALTER TABLE public.inspections ENABLE ROW LEVEL SECURITY;

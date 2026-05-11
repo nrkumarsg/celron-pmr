@@ -14,6 +14,9 @@ abstract class InspectionRepository {
   /// Fetch inspections linked to a specific maintenance visit.
   Stream<List<Inspection>> getInspectionsByVisit(String visitId);
 
+  /// Fetch inspections linked to a specific maintenance visit (non-stream).
+  Future<List<Inspection>> getInspectionsByVisitAsync(String visitId);
+
   /// Save or update an inspection report.
   Future<void> saveInspection(Inspection inspection);
 }

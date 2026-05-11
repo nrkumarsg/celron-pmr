@@ -12,6 +12,7 @@ import '../services/pdf_service.dart';
 import '../logic/health_logic.dart';
 
 import '../models/service_visit.dart';
+import '../services/ai_service.dart';
 
 class InspectionFormScreen extends StatefulWidget {
   final Asset asset;
@@ -45,6 +46,7 @@ class _InspectionFormScreenState extends State<InspectionFormScreen> {
   String _bearingStatus = 'NORMAL';
   String _velocityStatus = 'NORMAL';
   String _maintenanceAdvice = 'Machine healthy.';
+  bool _isFaulty = false;
 
   late TextEditingController _projectRefController;
 
@@ -52,6 +54,8 @@ class _InspectionFormScreenState extends State<InspectionFormScreen> {
   late TextEditingController _velocityController;
   final _inspectionByController = TextEditingController(text: 'N.R.Kumar');
   final _quarterlyCycleController = TextEditingController(text: 'Q1-2026');
+  final _aiConclusionController = TextEditingController();
+  bool _isGeneratingConclusion = false;
 
   @override
   void initState() {
@@ -71,6 +75,7 @@ class _InspectionFormScreenState extends State<InspectionFormScreen> {
     _velocityController.dispose();
     _inspectionByController.dispose();
     _quarterlyCycleController.dispose();
+    _aiConclusionController.dispose();
     super.dispose();
   }
 
@@ -225,6 +230,16 @@ class _InspectionFormScreenState extends State<InspectionFormScreen> {
   }
 
   void _updateStatus() {
+    if (_isFaulty) {
+      setState(() {
+        _bearingStatus = 'FAULTY';
+        _velocityStatus = 'FAULTY';
+        _overallStatus = 'FAULTY';
+        _maintenanceAdvice = 'Machine is marked as FAULTY. Inspection could not be completed.';
+      });
+      return;
+    }
+
     final statusMap = HealthLogic.getDualStatus(_vibrationG, _velocityMms, widget.asset.powerKw);
     setState(() {
       _bearingStatus = statusMap['bearing']!;
@@ -272,6 +287,8 @@ class _InspectionFormScreenState extends State<InspectionFormScreen> {
             _buildParameterSection('Pump Parameters', _pumpParams, Icons.plumbing),
             const SizedBox(height: 24),
             _buildParameterSection('Pipes and Others Parameters', _pipeParams, Icons.account_tree),
+            const SizedBox(height: 24),
+            _buildAIConclusionSection(),
             const SizedBox(height: 100),
           ],
         ),
@@ -430,6 +447,100 @@ class _InspectionFormScreenState extends State<InspectionFormScreen> {
     });
   }
 
+  Future<void> _generateFinalAIConclusion() async {
+    setState(() => _isGeneratingConclusion = true);
+    
+    try {
+      final aiService = GetIt.instance<AIService>();
+      
+      // Create a temporary inspection object for analysis
+      final tempInspection = Inspection(
+        id: '',
+        assetId: widget.asset.id,
+        date: DateTime.now(),
+        projectRef: _projectRefController.text,
+        partnerRef: _partnerRefController.text,
+        inspectionBy: _inspectionByController.text,
+        quarterlyCycle: _quarterlyCycleController.text,
+        vibrationG: _vibrationG,
+        temperatureC: _temperatureC,
+        motorParameters: _motorParams,
+        pumpParameters: _pumpParams,
+        pipeParameters: _pipeParams,
+        otherParameters: {},
+        overallStatus: _overallStatus,
+      );
+
+      final conclusion = await aiService.generateFinalConclusion(widget.asset, tempInspection);
+      _aiConclusionController.text = conclusion;
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('AI Error: $e')));
+    } finally {
+      if (mounted) setState(() => _isGeneratingConclusion = false);
+    }
+  }
+
+  Widget _buildAIConclusionSection() {
+    return Card(
+      elevation: 4,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: const BorderSide(color: Colors.deepPurple, width: 1),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Icon(Icons.psychology, color: Colors.deepPurple),
+                const SizedBox(width: 8),
+                const Text('FINAL AI CONCLUSION & VERDICT', 
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.deepPurple)),
+                const Spacer(),
+                if (_isGeneratingConclusion) 
+                  const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.deepPurple)),
+              ],
+            ),
+            const Divider(),
+            const Text(
+              'Synthesis of all sensor data, mechanical parameters, and visual findings.',
+              style: TextStyle(fontSize: 12, color: Colors.grey, fontStyle: FontStyle.italic),
+            ),
+            const SizedBox(height: 16),
+            TextFormField(
+              controller: _aiConclusionController,
+              maxLines: 5,
+              decoration: InputDecoration(
+                hintText: 'Click the button below to generate analysis...',
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                filled: true,
+                fillColor: Colors.deepPurple.withOpacity(0.02),
+              ),
+              style: const TextStyle(fontSize: 13, height: 1.4),
+            ),
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: _isGeneratingConclusion ? null : _generateFinalAIConclusion,
+                icon: const Icon(Icons.auto_awesome),
+                label: const Text('GENERATE FINAL AI VERDICT'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.deepPurple[700],
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
 
   Widget _buildMetadataDisplay() {
     return Container(
@@ -483,6 +594,19 @@ class _InspectionFormScreenState extends State<InspectionFormScreen> {
   Widget _buildStatusHeader() {
     return Column(
       children: [
+        SwitchListTile(
+          title: const Text('Mark Machine as FAULTY', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.red)),
+          subtitle: const Text('Use this if the machine cannot be inspected due to a fault.'),
+          value: _isFaulty,
+          activeColor: Colors.red,
+          onChanged: (val) {
+            setState(() {
+              _isFaulty = val;
+              _updateStatus();
+            });
+          },
+        ),
+        const SizedBox(height: 8),
         Container(
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
@@ -538,7 +662,7 @@ class _InspectionFormScreenState extends State<InspectionFormScreen> {
   Color _getStatusColor(String status) {
     if (status == 'NORMAL') return Colors.green;
     if (status == 'MARGINAL') return Colors.orange;
-    if (status == 'CRITICAL') return Colors.red;
+    if (status == 'CRITICAL' || status == 'FAULTY') return Colors.red;
     return Colors.grey;
   }
   Widget _buildProjectDetailsSection() {
@@ -736,7 +860,7 @@ class _InspectionFormScreenState extends State<InspectionFormScreen> {
                 child: DropdownButtonFormField<String>(
                   value: data['status'],
                   decoration: const InputDecoration(contentPadding: EdgeInsets.symmetric(horizontal: 8), border: OutlineInputBorder()),
-                  items: ['OK', 'NOT OK', 'N/A', 'YES', 'NO'].map((s) => DropdownMenuItem(value: s, child: Text(s, style: const TextStyle(fontSize: 12)))).toList(),
+                  items: ['OK', 'NOT OK', 'N/A', 'YES', 'NO', 'FAULTY'].map((s) => DropdownMenuItem(value: s, child: Text(s, style: const TextStyle(fontSize: 12)))).toList(),
                   onChanged: (val) => setState(() => data['status'] = val),
                 ),
               ),
@@ -819,6 +943,7 @@ class _InspectionFormScreenState extends State<InspectionFormScreen> {
         otherParameters: {},
         overallStatus: _overallStatus,
         visitId: widget.visitId,
+        aiConclusion: _aiConclusionController.text,
       );
 
       await _inspectionRepo.saveInspection(inspection);

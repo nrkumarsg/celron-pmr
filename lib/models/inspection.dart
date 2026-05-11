@@ -16,6 +16,7 @@ class Inspection {
   final Map<String, dynamic> otherParameters;
   final String overallStatus;
   final String? visitId;
+  final String? aiConclusion;
 
   Inspection({
     required this.id,
@@ -35,6 +36,7 @@ class Inspection {
     required this.otherParameters,
     required this.overallStatus,
     this.visitId,
+    this.aiConclusion,
   });
 
   Map<String, dynamic> toMap() {
@@ -56,6 +58,7 @@ class Inspection {
       'other_parameters': otherParameters,
       'overall_status': overallStatus,
       'visit_id': visitId,
+      'ai_conclusion': aiConclusion,
     };
   }
 
@@ -78,6 +81,7 @@ class Inspection {
       otherParameters: Map<String, dynamic>.from(map['other_parameters'] ?? map['otherParameters'] ?? {}),
       overallStatus: map['overall_status'] ?? map['overallStatus'] ?? 'NORMAL',
       visitId: map['visit_id'] ?? map['visitId'],
+      aiConclusion: map['ai_conclusion'] ?? map['aiConclusion'],
     );
   }
 }

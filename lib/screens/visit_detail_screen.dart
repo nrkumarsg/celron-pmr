@@ -88,23 +88,7 @@ class _VisitDetailScreenState extends State<VisitDetailScreen> {
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => AssetListScreen(
-              site: widget.site,
-              company: widget.company,
-              visitId: widget.visit.id,
-              visitLabel: widget.visit.celronRef,
-            ),
-          ),
-        ),
-        label: const Text('Manage Assets'),
-        icon: const Icon(Icons.settings),
-        backgroundColor: const Color(0xFF003366),
-        foregroundColor: Colors.white,
-      ),
+
     );
   }
 
@@ -134,6 +118,21 @@ class _VisitDetailScreenState extends State<VisitDetailScreen> {
               ),
               Row(
                 children: [
+                  IconButton(
+                    tooltip: 'Manage Assets',
+                    icon: const Icon(Icons.settings, color: Color(0xFF003366), size: 20),
+                    onPressed: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => AssetListScreen(
+                          site: widget.site,
+                          company: widget.company,
+                          visitId: widget.visit.id,
+                          visitLabel: widget.visit.celronRef,
+                        ),
+                      ),
+                    ),
+                  ),
                   IconButton(
                     tooltip: 'Duplicate Job',
                     icon: const Icon(Icons.copy, color: Colors.teal, size: 20),
