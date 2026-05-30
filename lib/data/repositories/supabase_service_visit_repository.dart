@@ -91,7 +91,7 @@ class SupabaseServiceVisitRepository implements ServiceVisitRepository {
   Future<void> saveVisit(ServiceVisit visit) async {
     await _client.from('service_visits').upsert(visit.toMap());
     // Clear cache to force refresh on next stream yield
-    await _localCache.cacheListData(_getCacheKey(visit.siteId), null);
+    await _localCache.clearCache(_getCacheKey(visit.siteId));
   }
 
   @override
@@ -101,7 +101,7 @@ class SupabaseServiceVisitRepository implements ServiceVisitRepository {
     await _client.from('service_visits').delete().eq('id', visitId);
     
     if (visit != null && visit['site_id'] != null) {
-      await _localCache.cacheListData(_getCacheKey(visit['site_id'].toString()), null);
+      await _localCache.clearCache(_getCacheKey(visit['site_id'].toString()));
     }
   }
 }

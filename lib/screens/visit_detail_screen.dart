@@ -14,6 +14,7 @@ import '../injection_container.dart';
 import 'asset_list_screen.dart';
 import 'inspection_form_screen.dart';
 import '../services/ai_service.dart';
+import '../core/location_mapper.dart';
 
 class VisitDetailScreen extends StatefulWidget {
   final ServiceVisit visit;
@@ -225,18 +226,109 @@ class _VisitDetailScreenState extends State<VisitDetailScreen> {
     );
   }
 
+  Future<String?> _showSystemLocationSelectionDialog() async {
+    return showDialog<String>(
+      context: context,
+      builder: (BuildContext context) {
+        return Dialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          child: Padding(
+            padding: const EdgeInsets.all(20.0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Row(
+                  children: [
+                    Icon(Icons.filter_alt_outlined, color: Color(0xFF003366), size: 28),
+                    SizedBox(width: 10),
+                    Text(
+                      'Select System / Location',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF003366),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                const Text(
+                  'Select the system and location scope for this report. The PDF will filter assets and label the cover sheet accordingly.',
+                  style: TextStyle(fontSize: 13, color: Colors.black87),
+                ),
+                const SizedBox(height: 20),
+                ListTile(
+                  leading: const Icon(Icons.water_drop, color: Colors.blue),
+                  title: const Text('PWS System (Loc. L3)'),
+                  subtitle: const Text('RO High Pressure, Circulation, Ozone, Purified Water Pumps'),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  onTap: () => Navigator.pop(context, 'Loc.L3 (PWS System)'),
+                ),
+                const Divider(height: 1),
+                ListTile(
+                  leading: const Icon(Icons.wb_sunny_outlined, color: Colors.orange),
+                  title: const Text('WWTP (Outdoor) System (Loc. L1)'),
+                  subtitle: const Text('EQ, Wash Water, Drain Pumps'),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  onTap: () => Navigator.pop(context, 'Loc.L1 (WWTP(Outdoor) System)'),
+                ),
+                const Divider(height: 1),
+                ListTile(
+                  leading: const Icon(Icons.all_inclusive, color: Colors.teal),
+                  title: const Text('All Systems & Locations'),
+                  subtitle: const Text('Generate combined report for all assets'),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  onTap: () => Navigator.pop(context, 'ALL'),
+                ),
+                const SizedBox(height: 15),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(context, null),
+                      child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
+                    ),
+                  ],
+                )
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   void _generateContinuousAIReport() async {
+    final selectedLoc = await _showSystemLocationSelectionDialog();
+    if (selectedLoc == null) return;
+
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('Generating AI-Enhanced Continuous Reports (V2)...')),
     );
 
     try {
       final assets = await _assetRepo.getAssets(widget.site.id);
+
+      // Filter assets based on selection
+      List<Asset> filteredAssets = assets;
+      if (selectedLoc != 'ALL') {
+        filteredAssets = assets.where((asset) {
+          final loc = LocationMapper.getMappedLocation(asset.reference, asset.location);
+          return loc == selectedLoc;
+        }).toList();
+      }
+
+      if (filteredAssets.isEmpty) {
+        if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('No assets found for the selected system/location.')));
+        return;
+      }
+
       final inspections = await _inspectionRepo.getAllInspectionsForSite(widget.site.id);
       final visitInspections = inspections.where((i) => i.visitId == widget.visit.id).toList();
 
       final List<Map<String, dynamic>> assetData = [];
-      for (var asset in assets) {
+      for (var asset in filteredAssets) {
         final insp = visitInspections.firstWhere(
           (i) => i.assetId == asset.id,
           orElse: () => Inspection(
@@ -255,14 +347,28 @@ class _VisitDetailScreenState extends State<VisitDetailScreen> {
       }
 
       if (assetData.isEmpty) {
-        if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('No inspections completed for this visit.')));
+        if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('No inspections completed for the selected system/location.')));
         return;
       }
+
+      // Group assets: PWS System (Loc. L3) first, then WWTP (Loc. L1) next, preserving original order
+      final List<Map<String, dynamic>> sortedAssetData = [];
+      sortedAssetData.addAll(assetData.where((data) => LocationMapper.getMappedLocation(data['asset'].reference, data['asset'].location) == 'Loc.L3 (PWS System)'));
+      sortedAssetData.addAll(assetData.where((data) => LocationMapper.getMappedLocation(data['asset'].reference, data['asset'].location) == 'Loc.L1 (WWTP(Outdoor) System)'));
+      sortedAssetData.addAll(assetData.where((data) {
+        final loc = LocationMapper.getMappedLocation(data['asset'].reference, data['asset'].location);
+        return loc != 'Loc.L3 (PWS System)' && loc != 'Loc.L1 (WWTP(Outdoor) System)';
+      }));
+      assetData.clear();
+      assetData.addAll(sortedAssetData);
 
       final pdfBytes = await PdfService.generateMergedAIInspectionPdf(
         company: widget.company,
         site: widget.site,
         assetData: assetData,
+        systemLocation: selectedLoc == 'ALL' ? (widget.visit.systemLocation.isNotEmpty ? widget.visit.systemLocation : null) : selectedLoc,
+        ourRef: widget.visit.celronRef,
+        jobDescription: widget.visit.notes.isEmpty ? 'Quarterly Maintenance Inspection' : widget.visit.notes,
       );
 
       await Printing.layoutPdf(
@@ -283,17 +389,35 @@ class _VisitDetailScreenState extends State<VisitDetailScreen> {
   }
 
   void _generateContinuousPdf() async {
+    final selectedLoc = await _showSystemLocationSelectionDialog();
+    if (selectedLoc == null) return;
+
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('Preparing Merged Inspection Reports...')),
     );
 
     try {
       final assets = await _assetRepo.getAssets(widget.site.id);
+      
+      // Filter assets based on selection
+      List<Asset> filteredAssets = assets;
+      if (selectedLoc != 'ALL') {
+        filteredAssets = assets.where((asset) {
+          final loc = LocationMapper.getMappedLocation(asset.reference, asset.location);
+          return loc == selectedLoc;
+        }).toList();
+      }
+
+      if (filteredAssets.isEmpty) {
+        if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('No assets found for the selected system/location.')));
+        return;
+      }
+
       final inspections = await _inspectionRepo.getAllInspectionsForSite(widget.site.id);
       final visitInspections = inspections.where((i) => i.visitId == widget.visit.id).toList();
 
       final List<Map<String, dynamic>> assetData = [];
-      for (var asset in assets) {
+      for (var asset in filteredAssets) {
         final insp = visitInspections.firstWhere(
           (i) => i.assetId == asset.id,
           orElse: () => Inspection(
@@ -310,14 +434,28 @@ class _VisitDetailScreenState extends State<VisitDetailScreen> {
       }
 
       if (assetData.isEmpty) {
-        if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('No inspections completed for this visit.')));
+        if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('No inspections completed for the selected system/location.')));
         return;
       }
+
+      // Group assets: PWS System (Loc. L3) first, then WWTP (Loc. L1) next, preserving original order
+      final List<Map<String, dynamic>> sortedAssetData = [];
+      sortedAssetData.addAll(assetData.where((data) => LocationMapper.getMappedLocation(data['asset'].reference, data['asset'].location) == 'Loc.L3 (PWS System)'));
+      sortedAssetData.addAll(assetData.where((data) => LocationMapper.getMappedLocation(data['asset'].reference, data['asset'].location) == 'Loc.L1 (WWTP(Outdoor) System)'));
+      sortedAssetData.addAll(assetData.where((data) {
+        final loc = LocationMapper.getMappedLocation(data['asset'].reference, data['asset'].location);
+        return loc != 'Loc.L3 (PWS System)' && loc != 'Loc.L1 (WWTP(Outdoor) System)';
+      }));
+      assetData.clear();
+      assetData.addAll(sortedAssetData);
 
       final pdfBytes = await PdfService.generateMergedInspectionPdf(
         company: widget.company,
         site: widget.site,
         assetData: assetData,
+        systemLocation: selectedLoc == 'ALL' ? (widget.visit.systemLocation.isNotEmpty ? widget.visit.systemLocation : null) : selectedLoc,
+        ourRef: widget.visit.celronRef,
+        jobDescription: widget.visit.notes.isEmpty ? 'Quarterly Maintenance Inspection' : widget.visit.notes,
       );
 
       await Printing.layoutPdf(
@@ -330,17 +468,35 @@ class _VisitDetailScreenState extends State<VisitDetailScreen> {
   }
 
   void _generateVisitReport() async {
+    final selectedLoc = await _showSystemLocationSelectionDialog();
+    if (selectedLoc == null) return;
+
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('Preparing Visit Summary Report...')),
     );
 
     try {
       final assets = await _assetRepo.getAssets(widget.site.id);
+      
+      // Filter assets based on selection
+      List<Asset> filteredAssets = assets;
+      if (selectedLoc != 'ALL') {
+        filteredAssets = assets.where((asset) {
+          final loc = LocationMapper.getMappedLocation(asset.reference, asset.location);
+          return loc == selectedLoc;
+        }).toList();
+      }
+
+      if (filteredAssets.isEmpty) {
+        if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('No assets found for the selected system/location.')));
+        return;
+      }
+
       final inspections = await _inspectionRepo.getAllInspectionsForSite(widget.site.id);
       final visitInspections = inspections.where((i) => i.visitId == widget.visit.id).toList();
 
       final List<Map<String, dynamic>> assetData = [];
-      for (var asset in assets) {
+      for (var asset in filteredAssets) {
         final insp = visitInspections.firstWhere(
           (i) => i.assetId == asset.id,
           orElse: () => Inspection(
@@ -354,12 +510,24 @@ class _VisitDetailScreenState extends State<VisitDetailScreen> {
         assetData.add({'asset': asset, 'inspection': insp});
       }
 
+      // Group assets: PWS System (Loc. L3) first, then WWTP (Loc. L1) next, preserving original order
+      final List<Map<String, dynamic>> sortedAssetData = [];
+      sortedAssetData.addAll(assetData.where((data) => LocationMapper.getMappedLocation(data['asset'].reference, data['asset'].location) == 'Loc.L3 (PWS System)'));
+      sortedAssetData.addAll(assetData.where((data) => LocationMapper.getMappedLocation(data['asset'].reference, data['asset'].location) == 'Loc.L1 (WWTP(Outdoor) System)'));
+      sortedAssetData.addAll(assetData.where((data) {
+        final loc = LocationMapper.getMappedLocation(data['asset'].reference, data['asset'].location);
+        return loc != 'Loc.L3 (PWS System)' && loc != 'Loc.L1 (WWTP(Outdoor) System)';
+      }));
+      assetData.clear();
+      assetData.addAll(sortedAssetData);
+
       final pdfBytes = await PdfService.generateVisitReport(
         company: widget.company,
         site: widget.site,
         assetData: assetData,
         ourRef: widget.visit.celronRef,
         jobDescription: widget.visit.notes.isEmpty ? 'Quarterly Maintenance Inspection' : widget.visit.notes,
+        systemLocation: selectedLoc == 'ALL' ? (widget.visit.systemLocation.isNotEmpty ? widget.visit.systemLocation : null) : selectedLoc,
       );
 
       await Printing.layoutPdf(
@@ -413,6 +581,7 @@ class _VisitDetailScreenState extends State<VisitDetailScreen> {
       contractEnds: widget.visit.contractEnds,
       createdAt: DateTime.now(),
       status: 'OPEN',
+      systemLocation: widget.visit.systemLocation,
     );
 
     await sl<ServiceVisitRepository>().saveVisit(newVisit);

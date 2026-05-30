@@ -7,12 +7,14 @@ import 'pdf_preview_screen.dart';
 import '../domain/repositories/inspection_repository.dart';
 import 'package:get_it/get_it.dart';
 import '../services/storage_service.dart';
+import '../domain/repositories/asset_repository.dart';
 import '../core/celron_company.dart';
 import '../services/pdf_service.dart';
 import '../logic/health_logic.dart';
 
 import '../models/service_visit.dart';
 import '../services/ai_service.dart';
+import '../core/location_mapper.dart';
 
 class InspectionFormScreen extends StatefulWidget {
   final Asset asset;
@@ -52,6 +54,7 @@ class _InspectionFormScreenState extends State<InspectionFormScreen> {
 
   late TextEditingController _partnerRefController;
   late TextEditingController _velocityController;
+  late TextEditingController _locationController;
   final _inspectionByController = TextEditingController(text: 'N.R.Kumar');
   final _quarterlyCycleController = TextEditingController(text: 'Q1-2026');
   final _aiConclusionController = TextEditingController();
@@ -63,6 +66,7 @@ class _InspectionFormScreenState extends State<InspectionFormScreen> {
     _projectRefController = TextEditingController(text: widget.visit?.celronRef ?? 'PRJ-2025-001');
     _partnerRefController = TextEditingController(text: widget.visit?.customerRef ?? 'PART-REF-001');
     _velocityController = TextEditingController(text: _velocityMms.toString());
+    _locationController = TextEditingController(text: widget.asset.location);
     _initializeDefaults();
     _updateVelocityFromG(); // Calculate initial velocity
     _updateStatus();
@@ -73,6 +77,7 @@ class _InspectionFormScreenState extends State<InspectionFormScreen> {
     _projectRefController.dispose();
     _partnerRefController.dispose();
     _velocityController.dispose();
+    _locationController.dispose();
     _inspectionByController.dispose();
     _quarterlyCycleController.dispose();
     _aiConclusionController.dispose();
@@ -591,11 +596,22 @@ class _InspectionFormScreenState extends State<InspectionFormScreen> {
             'Ref: ${widget.asset.reference}',
             style: const TextStyle(fontSize: 13),
           ),
-          Text(
-            'Loc: ${widget.asset.location}',
-            style: const TextStyle(fontSize: 13),
+          const SizedBox(height: 8),
+          TextFormField(
+            controller: _locationController,
+            decoration: InputDecoration(
+              labelText: 'System Location (Resolved: ${LocationMapper.getMappedLocation(widget.asset.reference, _locationController.text)})',
+              hintText: 'e.g. L3',
+              contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(6)),
+              filled: true,
+              fillColor: Colors.white,
+            ),
+            onChanged: (_) {
+              setState(() {});
+            },
           ),
-          const SizedBox(height: 4),
+          const SizedBox(height: 8),
           Text(
             'Machine Class: ${HealthLogic.getClass(widget.asset.powerKw)} (${widget.asset.powerKw} kW)',
             style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.blueGrey),
@@ -906,19 +922,39 @@ class _InspectionFormScreenState extends State<InspectionFormScreen> {
         color: Colors.white,
         boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 4, offset: Offset(0, -2))],
       ),
-      child: ElevatedButton(
-        style: ElevatedButton.styleFrom(
-          backgroundColor: const Color(0xFF003366),
-          minimumSize: const Size(double.infinity, 50),
-          shape: const RoundedRectangleBorder(borderRadius: BorderRadius.zero),
-        ),
-        onPressed: _saveInspection,
-        child: const Text('GENERATE CERTIFICATE & SAVE', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+      child: Row(
+        children: [
+          Expanded(
+            child: ElevatedButton.icon(
+              icon: const Icon(Icons.save, color: Colors.white),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.green[800],
+                minimumSize: const Size(double.infinity, 50),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+              ),
+              onPressed: () => _saveInspection(openPdfPreview: false),
+              label: const Text('SAVE ONLY', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: ElevatedButton.icon(
+              icon: const Icon(Icons.picture_as_pdf, color: Colors.white),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF003366),
+                minimumSize: const Size(double.infinity, 50),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+              ),
+              onPressed: () => _saveInspection(openPdfPreview: true),
+              label: const Text('GENERATE PDF', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+            ),
+          ),
+        ],
       ),
     );
   }
 
-  Future<void> _saveInspection() async {
+  Future<void> _saveInspection({required bool openPdfPreview}) async {
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -961,30 +997,52 @@ class _InspectionFormScreenState extends State<InspectionFormScreen> {
         aiConclusion: _aiConclusionController.text,
       );
 
+      // Save location changes to the asset if updated
+      if (_locationController.text != widget.asset.location) {
+        final updatedAsset = Asset(
+          id: widget.asset.id,
+          siteId: widget.asset.siteId,
+          name: widget.asset.name,
+          reference: widget.asset.reference,
+          model: widget.asset.model,
+          type: widget.asset.type,
+          location: _locationController.text,
+          rpm: widget.asset.rpm,
+          hz: widget.asset.hz,
+          powerKw: widget.asset.powerKw,
+        );
+        await GetIt.instance<AssetRepository>().saveAsset(updatedAsset);
+      }
+
       await _inspectionRepo.saveInspection(inspection);
 
-      final pdfData = await PdfService.generateInspectionPdf(
-        company: company,
-        site: site,
-        asset: widget.asset,
-        inspection: inspection,
-      );
-
       if (mounted) {
-        Navigator.pop(context);
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => PdfPreviewScreen(
-              pdfData: pdfData,
-              fileName: 'Report_${widget.asset.reference}.pdf',
+        Navigator.pop(context); // Pop loading dialog
+        
+        if (openPdfPreview) {
+          final pdfData = await PdfService.generateInspectionPdf(
+            company: company,
+            site: site,
+            asset: widget.asset,
+            inspection: inspection,
+          );
+          
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (context) => PdfPreviewScreen(
+                pdfData: pdfData,
+                fileName: 'Report_${widget.asset.reference}.pdf',
+              ),
             ),
-          ),
-        );
+          );
+        } else {
+          Navigator.pop(context); // Exit inspection form back to visit detail
+        }
       }
     } catch (e) {
       if (mounted) {
-        Navigator.pop(context);
+        Navigator.pop(context); // Pop loading dialog
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
       }
     }

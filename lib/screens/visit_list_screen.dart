@@ -166,6 +166,16 @@ class _VisitListScreenState extends State<VisitListScreen> {
           children: [
             const SizedBox(height: 8),
             Text('PO Reference: ${visit.customerRef}', style: const TextStyle(fontWeight: FontWeight.w600)),
+            if (visit.systemLocation.isNotEmpty) ...[
+              const SizedBox(height: 4),
+              Row(
+                children: [
+                  const Icon(Icons.location_on, size: 14, color: Colors.blueGrey),
+                  const SizedBox(width: 6),
+                  Text('System / Location: ${visit.systemLocation}', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.blueGrey)),
+                ],
+              ),
+            ],
             const SizedBox(height: 4),
             Row(
               children: [
@@ -224,9 +234,12 @@ class _VisitListScreenState extends State<VisitListScreen> {
     }
   }
 
+
+
   void _showAddVisitDialog({ServiceVisit? visit}) {
     final celronRefController = TextEditingController(text: visit?.celronRef ?? 'CRN-PM-${DateFormat('yyyyMMdd').format(DateTime.now())}');
     final customerRefController = TextEditingController(text: visit?.customerRef ?? '');
+    final systemLocationController = TextEditingController(text: visit?.systemLocation ?? '');
     final notesController = TextEditingController(text: visit?.notes ?? '');
     DateTime selectedDate = visit?.visitDate ?? DateTime.now();
     String selectedJobType = visit?.jobType ?? 'AD_HOC';
@@ -243,6 +256,7 @@ class _VisitListScreenState extends State<VisitListScreen> {
               children: [
                 _buildDialogField(celronRefController, 'Celron Job Reference', Icons.tag),
                 _buildDialogField(customerRefController, 'Customer PO Reference', Icons.shopping_bag),
+                _buildDialogField(systemLocationController, 'System / Location (e.g. Loc.L3 (PWS System))', Icons.location_on),
                 ListTile(
                   leading: const Icon(Icons.date_range, color: Color(0xFF003366)),
                   title: Text('Visit Date: ${DateFormat('dd MMM yyyy').format(selectedDate)}'),
@@ -326,6 +340,7 @@ class _VisitListScreenState extends State<VisitListScreen> {
                     contractEnds: contractEndsDate,
                     createdAt: visit?.createdAt ?? DateTime.now(),
                     status: visit?.status ?? 'OPEN',
+                    systemLocation: systemLocationController.text,
                   );
                   await _visitRepo.saveVisit(newVisit);
                   if (mounted) Navigator.pop(context);
@@ -383,6 +398,7 @@ class _VisitListScreenState extends State<VisitListScreen> {
         contractEnds: visit.contractEnds,
         createdAt: DateTime.now(),
         status: 'OPEN',
+        systemLocation: visit.systemLocation,
       );
 
       // 1. Save the new visit
@@ -397,6 +413,10 @@ class _VisitListScreenState extends State<VisitListScreen> {
           id: DateTime.now().millisecondsSinceEpoch.toString() + oldInsp.assetId.substring(0, 3), // Unique ID
           assetId: oldInsp.assetId,
           date: DateTime.now(),
+          projectRef: oldInsp.projectRef,
+          partnerRef: oldInsp.partnerRef,
+          inspectionBy: oldInsp.inspectionBy,
+          quarterlyCycle: oldInsp.quarterlyCycle,
           vibrationG: oldInsp.vibrationG,
           temperatureC: oldInsp.temperatureC,
           motorParameters: Map<String, dynamic>.from(oldInsp.motorParameters),

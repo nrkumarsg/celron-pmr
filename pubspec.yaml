@@ -51,7 +51,6 @@ dependencies:
   flutter_dotenv: ^6.0.1
   get_it: ^9.2.1
   shared_preferences: ^2.3.2
-  google_generative_ai: ^0.4.5
   http: ^1.2.2
 
 dev_dependencies:
