@@ -5,7 +5,7 @@ class LocationMapper {
     if (refUpper.contains('P7014') || refUpper.contains('P7015')) {
       return 'Loc.L3 (PWS System)';
     }
-    if (refUpper.contains('P7051') || refUpper.contains('P7651')) {
+    if (refUpper.contains('P7051') || refUpper.contains('P7651') || refUpper.contains('P70651')) {
       return 'Loc.L1 (WWTP(Outdoor) System)';
     }
     return fallback;

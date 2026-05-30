@@ -351,16 +351,22 @@ class _VisitDetailScreenState extends State<VisitDetailScreen> {
         return;
       }
 
-      // Group assets: PWS System (Loc. L3) first, then WWTP (Loc. L1) next, preserving original order
-      final List<Map<String, dynamic>> sortedAssetData = [];
-      sortedAssetData.addAll(assetData.where((data) => LocationMapper.getMappedLocation(data['asset'].reference, data['asset'].location) == 'Loc.L3 (PWS System)'));
-      sortedAssetData.addAll(assetData.where((data) => LocationMapper.getMappedLocation(data['asset'].reference, data['asset'].location) == 'Loc.L1 (WWTP(Outdoor) System)'));
-      sortedAssetData.addAll(assetData.where((data) {
+      // Group assets: PWS System (Loc. L3) first, then WWTP (Loc. L1) next, sorted by System Ref (motor no.) alphabetically
+      final pwsAssets = assetData.where((data) => LocationMapper.getMappedLocation(data['asset'].reference, data['asset'].location) == 'Loc.L3 (PWS System)').toList();
+      final wwtpAssets = assetData.where((data) => LocationMapper.getMappedLocation(data['asset'].reference, data['asset'].location) == 'Loc.L1 (WWTP(Outdoor) System)').toList();
+      final otherAssets = assetData.where((data) {
         final loc = LocationMapper.getMappedLocation(data['asset'].reference, data['asset'].location);
         return loc != 'Loc.L3 (PWS System)' && loc != 'Loc.L1 (WWTP(Outdoor) System)';
-      }));
+      }).toList();
+
+      pwsAssets.sort((a, b) => (a['asset'].reference as String).compareTo(b['asset'].reference as String));
+      wwtpAssets.sort((a, b) => (a['asset'].reference as String).compareTo(b['asset'].reference as String));
+      otherAssets.sort((a, b) => (a['asset'].reference as String).compareTo(b['asset'].reference as String));
+
       assetData.clear();
-      assetData.addAll(sortedAssetData);
+      assetData.addAll(pwsAssets);
+      assetData.addAll(wwtpAssets);
+      assetData.addAll(otherAssets);
 
       final pdfBytes = await PdfService.generateMergedAIInspectionPdf(
         company: widget.company,
@@ -438,16 +444,22 @@ class _VisitDetailScreenState extends State<VisitDetailScreen> {
         return;
       }
 
-      // Group assets: PWS System (Loc. L3) first, then WWTP (Loc. L1) next, preserving original order
-      final List<Map<String, dynamic>> sortedAssetData = [];
-      sortedAssetData.addAll(assetData.where((data) => LocationMapper.getMappedLocation(data['asset'].reference, data['asset'].location) == 'Loc.L3 (PWS System)'));
-      sortedAssetData.addAll(assetData.where((data) => LocationMapper.getMappedLocation(data['asset'].reference, data['asset'].location) == 'Loc.L1 (WWTP(Outdoor) System)'));
-      sortedAssetData.addAll(assetData.where((data) {
+      // Group assets: PWS System (Loc. L3) first, then WWTP (Loc. L1) next, sorted by System Ref (motor no.) alphabetically
+      final pwsAssets = assetData.where((data) => LocationMapper.getMappedLocation(data['asset'].reference, data['asset'].location) == 'Loc.L3 (PWS System)').toList();
+      final wwtpAssets = assetData.where((data) => LocationMapper.getMappedLocation(data['asset'].reference, data['asset'].location) == 'Loc.L1 (WWTP(Outdoor) System)').toList();
+      final otherAssets = assetData.where((data) {
         final loc = LocationMapper.getMappedLocation(data['asset'].reference, data['asset'].location);
         return loc != 'Loc.L3 (PWS System)' && loc != 'Loc.L1 (WWTP(Outdoor) System)';
-      }));
+      }).toList();
+
+      pwsAssets.sort((a, b) => (a['asset'].reference as String).compareTo(b['asset'].reference as String));
+      wwtpAssets.sort((a, b) => (a['asset'].reference as String).compareTo(b['asset'].reference as String));
+      otherAssets.sort((a, b) => (a['asset'].reference as String).compareTo(b['asset'].reference as String));
+
       assetData.clear();
-      assetData.addAll(sortedAssetData);
+      assetData.addAll(pwsAssets);
+      assetData.addAll(wwtpAssets);
+      assetData.addAll(otherAssets);
 
       final pdfBytes = await PdfService.generateMergedInspectionPdf(
         company: widget.company,
@@ -510,16 +522,22 @@ class _VisitDetailScreenState extends State<VisitDetailScreen> {
         assetData.add({'asset': asset, 'inspection': insp});
       }
 
-      // Group assets: PWS System (Loc. L3) first, then WWTP (Loc. L1) next, preserving original order
-      final List<Map<String, dynamic>> sortedAssetData = [];
-      sortedAssetData.addAll(assetData.where((data) => LocationMapper.getMappedLocation(data['asset'].reference, data['asset'].location) == 'Loc.L3 (PWS System)'));
-      sortedAssetData.addAll(assetData.where((data) => LocationMapper.getMappedLocation(data['asset'].reference, data['asset'].location) == 'Loc.L1 (WWTP(Outdoor) System)'));
-      sortedAssetData.addAll(assetData.where((data) {
+      // Group assets: PWS System (Loc. L3) first, then WWTP (Loc. L1) next, sorted by System Ref (motor no.) alphabetically
+      final pwsAssets = assetData.where((data) => LocationMapper.getMappedLocation(data['asset'].reference, data['asset'].location) == 'Loc.L3 (PWS System)').toList();
+      final wwtpAssets = assetData.where((data) => LocationMapper.getMappedLocation(data['asset'].reference, data['asset'].location) == 'Loc.L1 (WWTP(Outdoor) System)').toList();
+      final otherAssets = assetData.where((data) {
         final loc = LocationMapper.getMappedLocation(data['asset'].reference, data['asset'].location);
         return loc != 'Loc.L3 (PWS System)' && loc != 'Loc.L1 (WWTP(Outdoor) System)';
-      }));
+      }).toList();
+
+      pwsAssets.sort((a, b) => (a['asset'].reference as String).compareTo(b['asset'].reference as String));
+      wwtpAssets.sort((a, b) => (a['asset'].reference as String).compareTo(b['asset'].reference as String));
+      otherAssets.sort((a, b) => (a['asset'].reference as String).compareTo(b['asset'].reference as String));
+
       assetData.clear();
-      assetData.addAll(sortedAssetData);
+      assetData.addAll(pwsAssets);
+      assetData.addAll(wwtpAssets);
+      assetData.addAll(otherAssets);
 
       final pdfBytes = await PdfService.generateVisitReport(
         company: widget.company,
