@@ -626,6 +626,7 @@ class _VisitDetailScreenState extends State<VisitDetailScreen> {
               asset: asset,
               site: widget.site,
               visitId: widget.visit.id,
+              existingInspection: isInspected ? inspection : null,
             ),
           ),
         ),

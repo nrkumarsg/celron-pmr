@@ -21,6 +21,7 @@ class InspectionFormScreen extends StatefulWidget {
   final Site site;
   final String? visitId;
   final ServiceVisit? visit;
+  final Inspection? existingInspection;
 
   const InspectionFormScreen({
     super.key, 
@@ -28,6 +29,7 @@ class InspectionFormScreen extends StatefulWidget {
     required this.site,
     this.visitId,
     this.visit,
+    this.existingInspection,
   });
 
   @override
@@ -63,13 +65,41 @@ class _InspectionFormScreenState extends State<InspectionFormScreen> {
   @override
   void initState() {
     super.initState();
-    _projectRefController = TextEditingController(text: widget.visit?.celronRef ?? 'PRJ-2025-001');
-    _partnerRefController = TextEditingController(text: widget.visit?.customerRef ?? 'PART-REF-001');
-    _velocityController = TextEditingController(text: _velocityMms.toString());
     _locationController = TextEditingController(text: widget.asset.location);
-    _initializeDefaults();
-    _updateVelocityFromG(); // Calculate initial velocity
-    _updateStatus();
+
+    final ext = widget.existingInspection;
+    if (ext != null) {
+      _projectRefController = TextEditingController(text: ext.projectRef.isNotEmpty ? ext.projectRef : (widget.visit?.celronRef ?? 'PRJ-2025-001'));
+      _partnerRefController = TextEditingController(text: ext.partnerRef.isNotEmpty ? ext.partnerRef : (widget.visit?.customerRef ?? 'PART-REF-001'));
+      _inspectionByController.text = ext.inspectionBy.isNotEmpty ? ext.inspectionBy : 'N.R.Kumar';
+      _quarterlyCycleController.text = ext.quarterlyCycle.isNotEmpty ? ext.quarterlyCycle : 'Q1-2026';
+      _aiConclusionController.text = ext.aiConclusion ?? '';
+      _vibrationG = ext.vibrationG;
+      _temperatureC = ext.temperatureC;
+      _overallStatus = ext.overallStatus;
+      _isFaulty = _overallStatus == 'FAULTY';
+
+      // Load parameter maps safely
+      _motorParams = Map<String, dynamic>.from(ext.motorParameters);
+      _pumpParams = Map<String, dynamic>.from(ext.pumpParameters);
+      _pipeParams = Map<String, dynamic>.from(ext.pipeParameters);
+
+      // If parameters are empty, fall back to defaults
+      if (_motorParams.isEmpty || _pumpParams.isEmpty || _pipeParams.isEmpty) {
+        _initializeDefaults();
+      }
+
+      _velocityController = TextEditingController(text: _velocityMms.toString());
+      _updateVelocityFromG();
+      _updateStatus();
+    } else {
+      _projectRefController = TextEditingController(text: widget.visit?.celronRef ?? 'PRJ-2025-001');
+      _partnerRefController = TextEditingController(text: widget.visit?.customerRef ?? 'PART-REF-001');
+      _velocityController = TextEditingController(text: _velocityMms.toString());
+      _initializeDefaults();
+      _updateVelocityFromG();
+      _updateStatus();
+    }
   }
 
   @override
@@ -282,7 +312,12 @@ class _InspectionFormScreenState extends State<InspectionFormScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('New Inspection: ${widget.asset.reference}', style: const TextStyle(fontWeight: FontWeight.bold)),
+        title: Text(
+          widget.existingInspection != null 
+              ? 'Edit Inspection: ${widget.asset.reference}' 
+              : 'New Inspection: ${widget.asset.reference}', 
+          style: const TextStyle(fontWeight: FontWeight.bold),
+        ),
         backgroundColor: const Color(0xFF003366),
         foregroundColor: Colors.white,
       ),
@@ -817,9 +852,19 @@ class _InspectionFormScreenState extends State<InspectionFormScreen> {
             const SizedBox(height: 16),
             Row(
               children: [
-                _buildImagePicker('Vibration Scan', _vibrationImg, () => _pickImage(true)),
+                _buildImagePicker(
+                  'Vibration Scan',
+                  _vibrationImg,
+                  () => _pickImage(true),
+                  existingUrl: widget.existingInspection?.vibrationImgUrl,
+                ),
                 const SizedBox(width: 16),
-                _buildImagePicker('Thermal Scan', _tempImg, () => _pickImage(false)),
+                _buildImagePicker(
+                  'Thermal Scan',
+                  _tempImg,
+                  () => _pickImage(false),
+                  existingUrl: widget.existingInspection?.tempImgUrl,
+                ),
               ],
             ),
           ],
@@ -828,7 +873,7 @@ class _InspectionFormScreenState extends State<InspectionFormScreen> {
     );
   }
 
-  Widget _buildImagePicker(String label, XFile? file, VoidCallback onTap) {
+  Widget _buildImagePicker(String label, XFile? file, VoidCallback onTap, {String? existingUrl}) {
     return Expanded(
       child: InkWell(
         onTap: onTap,
@@ -838,15 +883,34 @@ class _InspectionFormScreenState extends State<InspectionFormScreen> {
             border: Border.all(color: Colors.grey),
             borderRadius: BorderRadius.circular(8),
           ),
-          child: file == null
+          child: file != null
               ? Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Icon(Icons.add_a_photo, color: Colors.blue),
-                    Text(label, style: const TextStyle(fontSize: 12)),
+                    const Icon(Icons.check_circle, color: Colors.green, size: 32),
+                    const SizedBox(height: 4),
+                    const Text("New Photo Selected", style: TextStyle(fontSize: 10, color: Colors.green, fontWeight: FontWeight.bold)),
+                    Text(label, style: const TextStyle(fontSize: 10, color: Colors.grey)),
                   ],
                 )
-              : const Icon(Icons.check_circle, color: Colors.green, size: 40),
+              : (existingUrl != null && existingUrl.isNotEmpty)
+                  ? Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.cloud_done, color: Colors.teal, size: 32),
+                        const SizedBox(height: 4),
+                        const Text("Existing Photo Saved", style: TextStyle(fontSize: 10, color: Colors.teal, fontWeight: FontWeight.bold)),
+                        Text(label, style: const TextStyle(fontSize: 10, color: Colors.grey)),
+                      ],
+                    )
+                  : Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.add_a_photo, color: Colors.blue),
+                        const SizedBox(height: 4),
+                        Text(label, style: const TextStyle(fontSize: 12)),
+                      ],
+                    ),
         ),
       ),
     );
@@ -962,8 +1026,8 @@ class _InspectionFormScreenState extends State<InspectionFormScreen> {
     );
 
     try {
-      String? vibUrl;
-      String? tempUrl;
+      String? vibUrl = widget.existingInspection?.vibrationImgUrl;
+      String? tempUrl = widget.existingInspection?.tempImgUrl;
 
       if (_vibrationImg != null) {
         vibUrl = await StorageService().uploadImage(_vibrationImg!, 'inspections/${widget.asset.reference}_vib.jpg');
@@ -977,9 +1041,9 @@ class _InspectionFormScreenState extends State<InspectionFormScreen> {
       final site = widget.site;
 
       final inspection = Inspection(
-        id: DateTime.now().millisecondsSinceEpoch.toString(),
+        id: widget.existingInspection?.id ?? DateTime.now().millisecondsSinceEpoch.toString(),
         assetId: widget.asset.id,
-        date: DateTime.now(),
+        date: widget.existingInspection?.date ?? DateTime.now(),
         projectRef: _projectRefController.text,
         partnerRef: _partnerRefController.text,
         inspectionBy: _inspectionByController.text,

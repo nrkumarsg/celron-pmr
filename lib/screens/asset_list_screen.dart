@@ -291,16 +291,31 @@ class _AssetListScreenState extends State<AssetListScreen> {
             title: Text('System: ${asset.name}', style: const TextStyle(fontWeight: FontWeight.bold)),
             subtitle: Text('Ref: ${asset.reference} | Loc: ${asset.location}'),
             trailing: const Icon(Icons.chevron_right),
-            onTap: () => Navigator.push(
-              context, 
-              MaterialPageRoute(
-                builder: (context) => InspectionFormScreen(
-                  asset: asset, 
-                  site: widget.site,
-                  visitId: widget.visitId,
-                )
-              )
-            ),
+            onTap: () async {
+              Inspection? existing;
+              if (widget.visitId != null) {
+                final insps = await _inspectionRepo.getInspectionsByVisitAsync(widget.visitId!);
+                for (var i in insps) {
+                  if (i.assetId == asset.id) {
+                    existing = i;
+                    break;
+                  }
+                }
+              }
+              if (mounted) {
+                Navigator.push(
+                  context, 
+                  MaterialPageRoute(
+                    builder: (context) => InspectionFormScreen(
+                      asset: asset, 
+                      site: widget.site,
+                      visitId: widget.visitId,
+                      existingInspection: existing,
+                    )
+                  )
+                );
+              }
+            },
           ),
           const Divider(height: 1),
           Padding(
