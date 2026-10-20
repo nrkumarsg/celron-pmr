@@ -61,26 +61,57 @@ class _VisitDetailScreenState extends State<VisitDetailScreen> {
                   stream: _inspectionRepo.getInspectionsByVisit(widget.visit.id),
                   builder: (context, inspectionSnapshot) {
                     final inspections = inspectionSnapshot.data ?? [];
-                    final inspectedAssetIds = inspections.map((i) => i.assetId).toSet();
 
-                    return ListView.builder(
-                      padding: const EdgeInsets.all(16),
-                      itemCount: assets.length,
-                      itemBuilder: (context, index) {
-                        final asset = assets[index];
-                        final inspection = inspections.firstWhere(
-                          (i) => i.assetId == asset.id,
-                          orElse: () => Inspection(
-                            id: '', assetId: '', date: DateTime.now(),
-                            projectRef: '', partnerRef: '', inspectionBy: '',
-                            quarterlyCycle: '', vibrationG: 0, temperatureC: 0,
-                            motorParameters: {}, pumpParameters: {}, pipeParameters: {},
-                            otherParameters: {}, overallStatus: 'PENDING'
+                    int fullyCount = 0;
+                    int partialCount = 0;
+                    int notUpdatedCount = 0;
+                    for (var a in assets) {
+                      Inspection? insp;
+                      for (var i in inspections) {
+                        if (i.assetId == a.id) {
+                          insp = i;
+                          break;
+                        }
+                      }
+                      final status = insp != null ? insp.updateStatus : 'NOT_UPDATED';
+                      if (status == 'FULLY_UPDATED') {
+                        fullyCount++;
+                      } else if (status == 'PARTIAL_UPDATED') {
+                        partialCount++;
+                      } else {
+                        notUpdatedCount++;
+                      }
+                    }
+
+                    return Column(
+                      children: [
+                        _buildProgressHeader(assets.length, fullyCount, partialCount, notUpdatedCount),
+                        Expanded(
+                          child: ListView.builder(
+                            padding: const EdgeInsets.all(16),
+                            itemCount: assets.length,
+                            itemBuilder: (context, index) {
+                              final asset = assets[index];
+                              Inspection? match;
+                              for (var i in inspections) {
+                                if (i.assetId == asset.id) {
+                                  match = i;
+                                  break;
+                                }
+                              }
+                              final inspection = match ?? Inspection(
+                                id: '', assetId: '', date: DateTime.now(),
+                                projectRef: '', partnerRef: '', inspectionBy: '',
+                                quarterlyCycle: '', vibrationG: 0, temperatureC: 0,
+                                motorParameters: {}, pumpParameters: {}, pipeParameters: {},
+                                otherParameters: {'update_status': 'NOT_UPDATED'}, overallStatus: 'PENDING'
+                              );
+
+                              return _buildAssetStatusCard(asset, inspection, match != null);
+                            },
                           ),
-                        );
-
-                        return _buildAssetStatusCard(asset, inspection, inspectedAssetIds.contains(asset.id));
-                      },
+                        ),
+                      ],
                     );
                   },
                 );
@@ -612,13 +643,117 @@ class _VisitDetailScreenState extends State<VisitDetailScreen> {
   }
 
 
+  Widget _buildProgressHeader(int total, int fully, int partial, int notUpdated) {
+    if (total == 0) return const SizedBox.shrink();
+
+    final pct = total > 0 ? (fully / total) : 0.0;
+
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Job Progress: $fully / $total Complete',
+                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF003366)),
+              ),
+              Text(
+                '${(pct * 100).toInt()}%',
+                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF16A34A)),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(4),
+            child: LinearProgressIndicator(
+              value: pct,
+              minHeight: 6,
+              backgroundColor: const Color(0xFFE2E8F0),
+              valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF16A34A)),
+            ),
+          ),
+          const SizedBox(height: 8),
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: [
+                _buildMiniCounter('Not Updated', notUpdated, const Color(0xFF64748B), const Color(0xFFF1F5F9)),
+                const SizedBox(width: 8),
+                _buildMiniCounter('Partial', partial, const Color(0xFFD97706), const Color(0xFFFEF3C7)),
+                const SizedBox(width: 8),
+                _buildMiniCounter('Fully Updated', fully, const Color(0xFF16A34A), const Color(0xFFDCFCE7)),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMiniCounter(String label, int count, Color color, Color bg) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withValues(alpha: 0.3)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 7,
+            height: 7,
+            decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+          ),
+          const SizedBox(width: 5),
+          Text(
+            '$label: $count',
+            style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: color),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildAssetStatusCard(Asset asset, Inspection inspection, bool isInspected) {
+    final updateStatus = isInspected ? inspection.updateStatus : 'NOT_UPDATED';
+
+    Color cardBorderColor;
+    if (updateStatus == 'FULLY_UPDATED') {
+      cardBorderColor = const Color(0xFF86EFAC);
+    } else if (updateStatus == 'PARTIAL_UPDATED') {
+      cardBorderColor = const Color(0xFFFDE68A);
+    } else {
+      cardBorderColor = const Color(0xFFE2E8F0);
+    }
+
     return Card(
+      elevation: 2,
       margin: const EdgeInsets.only(bottom: 12),
-      child: ListTile(
-        title: Text(asset.name, style: const TextStyle(fontWeight: FontWeight.bold)),
-        subtitle: Text('Ref: ${asset.reference}'),
-        trailing: _buildStatusBadge(isInspected ? inspection.overallStatus : 'PENDING'),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(color: cardBorderColor, width: updateStatus != 'NOT_UPDATED' ? 1.5 : 1.0),
+      ),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
         onTap: () => Navigator.push(
           context,
           MaterialPageRoute(
@@ -630,8 +765,211 @@ class _VisitDetailScreenState extends State<VisitDetailScreen> {
             ),
           ),
         ),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          asset.name,
+                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Ref: ${asset.reference}${asset.location.isNotEmpty ? '  •  Loc: ${asset.location}' : ''}',
+                          style: TextStyle(color: Colors.blueGrey[700], fontSize: 13),
+                        ),
+                      ],
+                    ),
+                  ),
+                  if (isInspected && inspection.overallStatus != 'PENDING') ...[
+                    _buildStatusBadge(inspection.overallStatus),
+                    const SizedBox(width: 8),
+                  ],
+                  const Icon(Icons.chevron_right, color: Colors.blueGrey),
+                ],
+              ),
+              const SizedBox(height: 10),
+              const Divider(height: 1, color: Color(0xFFE2E8F0)),
+              const SizedBox(height: 10),
+              Row(
+                children: [
+                  const Text(
+                    'Status:',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      color: Color(0xFF475569),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Wrap(
+                      spacing: 8,
+                      runSpacing: 6,
+                      children: [
+                        _buildStatusChip(
+                          label: 'Not Updated',
+                          icon: Icons.radio_button_unchecked,
+                          isSelected: updateStatus == 'NOT_UPDATED',
+                          activeColor: const Color(0xFF475569),
+                          activeBg: const Color(0xFFF1F5F9),
+                          onTap: () => _setAssetUpdateStatus(asset, inspection, isInspected, 'NOT_UPDATED'),
+                        ),
+                        _buildStatusChip(
+                          label: 'Partial Updated',
+                          icon: Icons.timelapse,
+                          isSelected: updateStatus == 'PARTIAL_UPDATED',
+                          activeColor: const Color(0xFFD97706),
+                          activeBg: const Color(0xFFFEF3C7),
+                          onTap: () => _setAssetUpdateStatus(asset, inspection, isInspected, 'PARTIAL_UPDATED'),
+                        ),
+                        _buildStatusChip(
+                          label: 'Fully Updated',
+                          icon: Icons.check_circle,
+                          isSelected: updateStatus == 'FULLY_UPDATED',
+                          activeColor: const Color(0xFF16A34A),
+                          activeBg: const Color(0xFFDCFCE7),
+                          onTap: () => _setAssetUpdateStatus(asset, inspection, isInspected, 'FULLY_UPDATED'),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
       ),
     );
+  }
+
+  Widget _buildStatusChip({
+    required String label,
+    required IconData icon,
+    required bool isSelected,
+    required Color activeColor,
+    required Color activeBg,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(18),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+        decoration: BoxDecoration(
+          color: isSelected ? activeBg : Colors.grey.withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(
+            color: isSelected ? activeColor : Colors.grey.withValues(alpha: 0.35),
+            width: isSelected ? 1.6 : 1.0,
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              isSelected ? (icon == Icons.radio_button_unchecked ? Icons.radio_button_checked : icon) : Icons.circle_outlined,
+              size: 14,
+              color: isSelected ? activeColor : Colors.grey[600],
+            ),
+            const SizedBox(width: 5),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                color: isSelected ? activeColor : Colors.grey[800],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _setAssetUpdateStatus(Asset asset, Inspection inspection, bool isInspected, String newStatus) async {
+    try {
+      final otherParams = isInspected
+          ? Map<String, dynamic>.from(inspection.otherParameters)
+          : <String, dynamic>{};
+      otherParams['update_status'] = newStatus;
+
+      final now = DateTime.now();
+      final updatedInspection = isInspected && inspection.id.isNotEmpty
+          ? Inspection(
+              id: inspection.id,
+              assetId: asset.id,
+              date: inspection.date,
+              projectRef: inspection.projectRef.isNotEmpty ? inspection.projectRef : widget.visit.celronRef,
+              partnerRef: inspection.partnerRef.isNotEmpty ? inspection.partnerRef : widget.visit.customerRef,
+              inspectionBy: inspection.inspectionBy.isNotEmpty ? inspection.inspectionBy : 'N.R.Kumar',
+              quarterlyCycle: inspection.quarterlyCycle.isNotEmpty ? inspection.quarterlyCycle : 'Q1-2026',
+              vibrationG: inspection.vibrationG,
+              temperatureC: inspection.temperatureC,
+              vibrationImgUrl: inspection.vibrationImgUrl,
+              tempImgUrl: inspection.tempImgUrl,
+              motorParameters: inspection.motorParameters,
+              pumpParameters: inspection.pumpParameters,
+              pipeParameters: inspection.pipeParameters,
+              otherParameters: otherParams,
+              overallStatus: newStatus == 'NOT_UPDATED' && inspection.overallStatus == 'PENDING'
+                  ? 'PENDING'
+                  : (inspection.overallStatus == 'PENDING' ? 'NORMAL' : inspection.overallStatus),
+              visitId: widget.visit.id,
+              aiConclusion: inspection.aiConclusion,
+            )
+          : Inspection(
+              id: '${widget.visit.id}_${asset.id}_${now.millisecondsSinceEpoch}',
+              assetId: asset.id,
+              date: now,
+              projectRef: widget.visit.celronRef,
+              partnerRef: widget.visit.customerRef,
+              inspectionBy: 'N.R.Kumar',
+              quarterlyCycle: 'Q1-2026',
+              vibrationG: 0.0,
+              temperatureC: 0.0,
+              vibrationImgUrl: null,
+              tempImgUrl: null,
+              motorParameters: {},
+              pumpParameters: {},
+              pipeParameters: {},
+              otherParameters: otherParams,
+              overallStatus: newStatus == 'NOT_UPDATED' ? 'PENDING' : 'NORMAL',
+              visitId: widget.visit.id,
+              aiConclusion: null,
+            );
+
+      await _inspectionRepo.saveInspection(updatedInspection);
+
+      if (mounted) {
+        final label = newStatus == 'NOT_UPDATED'
+            ? 'Not Updated'
+            : (newStatus == 'PARTIAL_UPDATED' ? 'Partial Updated' : 'Fully Updated');
+        ScaffoldMessenger.of(context).clearSnackBars();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('${asset.name}: $label'),
+            duration: const Duration(seconds: 1),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to update status: $e')),
+        );
+      }
+    }
   }
 
   Widget _buildStatusBadge(String status) {

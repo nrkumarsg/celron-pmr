@@ -18,6 +18,17 @@ class Inspection {
   final String? visitId;
   final String? aiConclusion;
 
+  String get updateStatus {
+    if (otherParameters.containsKey('update_status')) {
+      final val = otherParameters['update_status']?.toString();
+      if (val != null && val.isNotEmpty) return val;
+    }
+    if (id.isNotEmpty && id != 'PENDING' && overallStatus != 'PENDING') {
+      return 'FULLY_UPDATED';
+    }
+    return 'NOT_UPDATED';
+  }
+
   Inspection({
     required this.id,
     required this.assetId,

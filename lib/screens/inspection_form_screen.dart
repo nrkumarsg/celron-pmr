@@ -45,6 +45,8 @@ class _InspectionFormScreenState extends State<InspectionFormScreen> {
   late Map<String, dynamic> _motorParams;
   late Map<String, dynamic> _pumpParams;
   late Map<String, dynamic> _pipeParams;
+  late Map<String, dynamic> _otherParams;
+  String _updateStatusSelection = 'FULLY_UPDATED';
   
   String _overallStatus = 'NORMAL';
   String _bearingStatus = 'NORMAL';
@@ -83,6 +85,8 @@ class _InspectionFormScreenState extends State<InspectionFormScreen> {
       _motorParams = Map<String, dynamic>.from(ext.motorParameters);
       _pumpParams = Map<String, dynamic>.from(ext.pumpParameters);
       _pipeParams = Map<String, dynamic>.from(ext.pipeParameters);
+      _otherParams = Map<String, dynamic>.from(ext.otherParameters);
+      _updateStatusSelection = ext.updateStatus;
 
       // If parameters are empty, fall back to defaults
       if (_motorParams.isEmpty || _pumpParams.isEmpty || _pipeParams.isEmpty) {
@@ -96,6 +100,8 @@ class _InspectionFormScreenState extends State<InspectionFormScreen> {
       _projectRefController = TextEditingController(text: widget.visit?.celronRef ?? 'PRJ-2025-001');
       _partnerRefController = TextEditingController(text: widget.visit?.customerRef ?? 'PART-REF-001');
       _velocityController = TextEditingController(text: _velocityMms.toString());
+      _otherParams = {};
+      _updateStatusSelection = 'FULLY_UPDATED';
       _initializeDefaults();
       _updateVelocityFromG();
       _updateStatus();
@@ -521,7 +527,7 @@ class _InspectionFormScreenState extends State<InspectionFormScreen> {
         motorParameters: _motorParams,
         pumpParameters: _pumpParams,
         pipeParameters: _pipeParams,
-        otherParameters: {},
+        otherParameters: _otherParams,
         overallStatus: _overallStatus,
       );
 
@@ -986,34 +992,99 @@ class _InspectionFormScreenState extends State<InspectionFormScreen> {
         color: Colors.white,
         boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 4, offset: Offset(0, -2))],
       ),
-      child: Row(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Expanded(
-            child: ElevatedButton.icon(
-              icon: const Icon(Icons.save, color: Colors.white),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.green[800],
-                minimumSize: const Size(double.infinity, 50),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+          Row(
+            children: [
+              const Text(
+                'Update Status: ',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF003366)),
               ),
-              onPressed: () => _saveInspection(openPdfPreview: false),
-              label: const Text('SAVE ONLY', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-            ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Wrap(
+                  spacing: 8,
+                  runSpacing: 4,
+                  children: [
+                    _buildFormStatusChip('NOT_UPDATED', 'Not Updated', Icons.radio_button_unchecked, const Color(0xFF64748B), const Color(0xFFF1F5F9)),
+                    _buildFormStatusChip('PARTIAL_UPDATED', 'Partial Updated', Icons.timelapse, const Color(0xFFD97706), const Color(0xFFFEF3C7)),
+                    _buildFormStatusChip('FULLY_UPDATED', 'Fully Updated', Icons.check_circle, const Color(0xFF16A34A), const Color(0xFFDCFCE7)),
+                  ],
+                ),
+              ),
+            ],
           ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: ElevatedButton.icon(
-              icon: const Icon(Icons.picture_as_pdf, color: Colors.white),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF003366),
-                minimumSize: const Size(double.infinity, 50),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: ElevatedButton.icon(
+                  icon: const Icon(Icons.save, color: Colors.white),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.green[800],
+                    minimumSize: const Size(double.infinity, 50),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+                  ),
+                  onPressed: () => _saveInspection(openPdfPreview: false),
+                  label: const Text('SAVE ONLY', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                ),
               ),
-              onPressed: () => _saveInspection(openPdfPreview: true),
-              label: const Text('GENERATE PDF', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-            ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: ElevatedButton.icon(
+                  icon: const Icon(Icons.picture_as_pdf, color: Colors.white),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF003366),
+                    minimumSize: const Size(double.infinity, 50),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+                  ),
+                  onPressed: () => _saveInspection(openPdfPreview: true),
+                  label: const Text('GENERATE PDF', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                ),
+              ),
+            ],
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildFormStatusChip(String value, String label, IconData icon, Color color, Color bg) {
+    final isSelected = _updateStatusSelection == value;
+    return InkWell(
+      onTap: () => setState(() => _updateStatusSelection = value),
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+        decoration: BoxDecoration(
+          color: isSelected ? bg : Colors.grey.withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: isSelected ? color : Colors.grey.withValues(alpha: 0.3),
+            width: isSelected ? 1.5 : 1.0,
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              isSelected ? (icon == Icons.radio_button_unchecked ? Icons.radio_button_checked : icon) : Icons.circle_outlined,
+              size: 14,
+              color: isSelected ? color : Colors.grey[600],
+            ),
+            const SizedBox(width: 4),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                color: isSelected ? color : Colors.grey[800],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -1040,6 +1111,8 @@ class _InspectionFormScreenState extends State<InspectionFormScreen> {
 
       final site = widget.site;
 
+      _otherParams['update_status'] = _updateStatusSelection;
+
       final inspection = Inspection(
         id: widget.existingInspection?.id ?? DateTime.now().millisecondsSinceEpoch.toString(),
         assetId: widget.asset.id,
@@ -1055,7 +1128,7 @@ class _InspectionFormScreenState extends State<InspectionFormScreen> {
         motorParameters: _motorParams,
         pumpParameters: _pumpParams,
         pipeParameters: _pipeParams,
-        otherParameters: {},
+        otherParameters: _otherParams,
         overallStatus: _overallStatus,
         visitId: widget.visitId,
         aiConclusion: _aiConclusionController.text,
