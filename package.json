@@ -5,7 +5,7 @@
   "scripts": {
     "start": "serve -s public",
     "dev": "flutter run -d chrome",
-    "vercel-build": "rm -rf flutter && git clone https://github.com/flutter/flutter.git -b stable --depth 1 && ./flutter/bin/flutter build web --release --dart-define=GROQ_API_KEY=\"$GROQ_API_KEY\" --dart-define=GEMINI_API_KEY=\"$GEMINI_API_KEY\"",
+    "vercel-build": "mkdir -p .bin && printf '#!/bin/sh\\ncommand -v \"$@\"\\n' > .bin/which && chmod +x .bin/which && export PATH=\"$PWD/.bin:$PATH\" && if [ ! -d \"flutter\" ]; then git clone https://github.com/flutter/flutter.git -b stable --depth 1; fi && ./flutter/bin/flutter config --no-analytics && ./flutter/bin/flutter build web --release --dart-define=GROQ_API_KEY=\"$GROQ_API_KEY\" --dart-define=GEMINI_API_KEY=\"$GEMINI_API_KEY\" && cp -rf build/web/* public/",
     "build": "flutter build web --release"
   },
   "dependencies": {
